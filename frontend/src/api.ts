@@ -1,7 +1,31 @@
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
+export type User = {
+  id: number;
+  name: string;
+  email: string;
+};
+
+export type UserCreate = {
+  name: string;
+  email: string;
+  password: string;
+};
+
+export type UserLogin = {
+  email: string;
+  password: string;
+};
+
+export type AuthSession = {
+  access_token: string;
+  token_type: "bearer";
+  user: User;
+};
+
 export type Activity = {
   id: number;
+  user_id: number;
   name: string;
   category_id: number;
   category: Category;
@@ -16,6 +40,7 @@ export type ActivityCreate = {
 
 export type Category = {
   id: number;
+  user_id: number;
   name: string;
 };
 
@@ -47,10 +72,15 @@ export type SummaryResponse = {
   current_streak: number;
 };
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+async function request<T>(
+  path: string,
+  init?: RequestInit,
+  token?: string,
+): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...init?.headers,
     },
     ...init,
@@ -64,39 +94,73 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export function fetchActivities(): Promise<Activity[]> {
-  return request<Activity[]>("/activities");
+export function fetchUsers(): Promise<User[]> {
+  return request<User[]>("/users");
 }
 
-export function createActivity(input: ActivityCreate): Promise<Activity> {
+export function createUser(input: UserCreate): Promise<User> {
+  return request<User>("/users", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function registerUser(input: UserCreate): Promise<AuthSession> {
+  return request<AuthSession>("/auth/register", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function loginUser(input: UserLogin): Promise<AuthSession> {
+  return request<AuthSession>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function fetchActivities(token: string): Promise<Activity[]> {
+  return request<Activity[]>("/activities", undefined, token);
+}
+
+export function createActivity(
+  token: string,
+  input: ActivityCreate,
+): Promise<Activity> {
   return request<Activity>("/activities", {
     method: "POST",
     body: JSON.stringify(input),
-  });
+  }, token);
 }
 
-export function fetchCategories(): Promise<Category[]> {
-  return request<Category[]>("/categories");
+export function fetchCategories(token: string): Promise<Category[]> {
+  return request<Category[]>("/categories", undefined, token);
 }
 
-export function createCategory(input: CategoryCreate): Promise<Category> {
+export function createCategory(
+  token: string,
+  input: CategoryCreate,
+): Promise<Category> {
   return request<Category>("/categories", {
     method: "POST",
     body: JSON.stringify(input),
-  });
+  }, token);
 }
 
-export function createEvent(input: EventCreate): Promise<void> {
+export function createEvent(token: string, input: EventCreate): Promise<void> {
   return request<void>("/events", {
     method: "POST",
     body: JSON.stringify(input),
-  });
+  }, token);
 }
 
-export function fetchHeatmap(year: number): Promise<HeatmapResponse> {
-  return request<HeatmapResponse>(`/stats/heatmap?year=${year}`);
+export function fetchHeatmap(
+  token: string,
+  year: number,
+): Promise<HeatmapResponse> {
+  return request<HeatmapResponse>(`/stats/heatmap?year=${year}`, undefined, token);
 }
 
-export function fetchSummary(year: number): Promise<SummaryResponse> {
-  return request<SummaryResponse>(`/stats/summary?year=${year}`);
+export function fetchSummary(token: string, year: number): Promise<SummaryResponse> {
+  return request<SummaryResponse>(`/stats/summary?year=${year}`, undefined, token);
 }

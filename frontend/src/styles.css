@@ -74,6 +74,38 @@ button:disabled {
   font-size: 1.05rem;
 }
 
+.user-chip {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  margin: 12px 0 0;
+  padding: 6px 10px;
+  background: rgba(45, 125, 63, 0.1);
+  color: #2d7d3f;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.session-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0 0;
+}
+
+.session-row .user-chip {
+  margin: 0;
+}
+
+.text-button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #2d7d3f;
+  font-weight: 800;
+}
+
 .panel {
   display: grid;
   gap: 18px;
@@ -161,6 +193,14 @@ button:disabled {
 
 .activity-form button {
   padding: 14px 18px;
+}
+
+.auth-panel {
+  grid-column: 1 / -1;
+}
+
+.auth-form {
+  grid-template-columns: 1fr;
 }
 
 .activity-grid {
@@ -277,6 +317,10 @@ button:disabled {
   .activity-form {
     grid-template-columns: 1.4fr 1fr 0.6fr;
     align-items: end;
+  }
+
+  .auth-form {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .activity-form button {

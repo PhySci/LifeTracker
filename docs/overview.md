@@ -10,7 +10,9 @@ completed.
 
 ## 2. Core Scenarios
 
-- Create a category.
+- Create a user space.
+- Log in to that user space.
+- Create a category in that user space.
 - Create an activity in a category.
 - Log an activity with one click.
 - View a yearly heatmap.
@@ -18,14 +20,23 @@ completed.
 
 ## 3. Entities
 
+### User
+
+- `id`
+- `name`
+- `email`
+- `password`
+
 ### Category
 
 - `id`
+- `user_id`
 - `name`
 
 ### Activity
 
 - `id`
+- `user_id`
 - `name`
 - `category_id`
 - `weight`
@@ -33,6 +44,7 @@ completed.
 ### Event
 
 - `id`
+- `user_id`
 - `activity_id`
 - `date` (`YYYY-MM-DD`)
 
@@ -66,12 +78,15 @@ React frontend -> FastAPI backend -> SQLite database
 - `GET /stats/heatmap`
 - `GET /stats/streak`
 - `GET /stats/summary`
+- `POST /auth/register`
+- `POST /auth/login`
 
 ## 7. Database
 
-- `categories(id, name)`
-- `activities(id, name, category_id, weight)`
-- `events(id, activity_id, date)`
+- `users(id, name, email, password)`
+- `categories(id, user_id, name)`
+- `activities(id, user_id, name, category_id, weight)`
+- `events(id, user_id, activity_id, date)`
 
 ## 8. Frontend
 
@@ -82,15 +97,17 @@ React frontend -> FastAPI backend -> SQLite database
 
 ## 9. Constraints
 
-- No authentication.
-- No multi-user support.
+- User-scoped endpoints require a Bearer access token.
 - No machine learning.
 
 ## 10. Acceptance Criteria
 
-- Categories can be created.
-- Activities can be created and linked to categories.
-- Events can be logged.
+- Users can be created.
+- Users can register and log in.
+- Categories can be created per user.
+- Activities can be created and linked to user-owned categories.
+- Events can be logged in a user-owned space.
+- Users do not see categories, activities, or events owned by other users.
 - Repeated clicks create repeated events.
 - Heatmap works.
 - Streak is calculated correctly.

@@ -9,6 +9,31 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 NonEmptyString = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
+class UserCreate(BaseModel):
+    name: NonEmptyString
+    email: NonEmptyString
+    password: NonEmptyString
+
+
+class UserLogin(BaseModel):
+    email: NonEmptyString
+    password: NonEmptyString
+
+
+class UserRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    email: str
+
+
+class AuthResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserRead
+
+
 class CategoryCreate(BaseModel):
     name: NonEmptyString
 
@@ -17,6 +42,7 @@ class CategoryRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    user_id: int
     name: str
 
 
@@ -30,6 +56,7 @@ class ActivityRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    user_id: int
     name: str
     category_id: int
     category: CategoryRead
@@ -45,6 +72,7 @@ class EventRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    user_id: int
     activity_id: int
     date: DateType
 

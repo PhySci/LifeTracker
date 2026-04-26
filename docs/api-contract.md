@@ -10,16 +10,36 @@ VITE_API_URL=http://localhost:8000
 ```
 
 All requests and responses use `application/json`. Dates are represented as
-`YYYY-MM-DD` strings. The MVP has no authentication, users, or roles; all data
-belongs to one local user.
+`YYYY-MM-DD` strings.
+
+Every user-scoped endpoint uses the Bearer access token returned by registration
+or login:
+
+```text
+Authorization: Bearer <access_token>
+```
 
 ## Entities
+
+### User
+
+```json
+{
+  "id": 1,
+  "name": "Demo User",
+  "email": "demo@example.com"
+}
+```
+
+The `password` field is accepted when creating a user but is not returned by the
+API.
 
 ### Category
 
 ```json
 {
   "id": 1,
+  "user_id": 1,
   "name": "sport"
 }
 ```
@@ -29,10 +49,12 @@ belongs to one local user.
 ```json
 {
   "id": 1,
+  "user_id": 1,
   "name": "Workout",
   "category_id": 1,
   "category": {
     "id": 1,
+    "user_id": 1,
     "name": "sport"
   },
   "weight": 1
@@ -44,6 +66,7 @@ belongs to one local user.
 ```json
 {
   "id": 10,
+  "user_id": 1,
   "activity_id": 1,
   "date": "2026-04-26"
 }
@@ -52,11 +75,66 @@ belongs to one local user.
 Every `POST /events` creates a new event. Multiple requests with the same
 `activity_id` and date produce multiple rows.
 
-## Categories
+## Users
 
-### GET /categories
+### POST /auth/register
 
-Returns all categories.
+Creates a user and returns an access token.
+
+Request:
+
+```json
+{
+  "name": "Demo User",
+  "email": "demo@example.com",
+  "password": "password"
+}
+```
+
+Response `201`:
+
+```json
+{
+  "access_token": "<token>",
+  "token_type": "bearer",
+  "user": {
+    "id": 1,
+    "name": "Demo User",
+    "email": "demo@example.com"
+  }
+}
+```
+
+### POST /auth/login
+
+Authenticates a user and returns an access token.
+
+Request:
+
+```json
+{
+  "email": "demo@example.com",
+  "password": "password"
+}
+```
+
+Response `200`:
+
+```json
+{
+  "access_token": "<token>",
+  "token_type": "bearer",
+  "user": {
+    "id": 1,
+    "name": "Demo User",
+    "email": "demo@example.com"
+  }
+}
+```
+
+### GET /users
+
+Returns all local users.
 
 Response `200`:
 
@@ -64,6 +142,49 @@ Response `200`:
 [
   {
     "id": 1,
+    "name": "Demo User",
+    "email": "demo@example.com"
+  }
+]
+```
+
+### POST /users
+
+Creates a user.
+
+Request:
+
+```json
+{
+  "name": "Demo User",
+  "email": "demo@example.com",
+  "password": "password"
+}
+```
+
+Response `201`:
+
+```json
+{
+  "id": 1,
+  "name": "Demo User",
+  "email": "demo@example.com"
+}
+```
+
+## Categories
+
+### GET /categories
+
+Returns categories owned by the authenticated user.
+
+Response `200`:
+
+```json
+[
+  {
+    "id": 1,
+    "user_id": 1,
     "name": "sport"
   }
 ]
@@ -71,7 +192,7 @@ Response `200`:
 
 ### POST /categories
 
-Creates a category.
+Creates a category owned by the authenticated user.
 
 Request:
 
@@ -86,6 +207,7 @@ Response `201`:
 ```json
 {
   "id": 1,
+  "user_id": 1,
   "name": "sport"
 }
 ```
@@ -93,13 +215,13 @@ Response `201`:
 Validation:
 
 - `name` is required and cannot be empty.
-- `name` must be unique.
+- `name` must be unique per user.
 
 ## Activities
 
 ### GET /activities
 
-Returns all activities with their categories.
+Returns activities owned by the authenticated user with their categories.
 
 Response `200`:
 
@@ -107,10 +229,12 @@ Response `200`:
 [
   {
     "id": 1,
+    "user_id": 1,
     "name": "Workout",
     "category_id": 1,
     "category": {
       "id": 1,
+      "user_id": 1,
       "name": "sport"
     },
     "weight": 1
@@ -120,7 +244,7 @@ Response `200`:
 
 ### POST /activities
 
-Creates an activity.
+Creates an activity owned by the authenticated user.
 
 Request:
 
@@ -137,10 +261,12 @@ Response `201`:
 ```json
 {
   "id": 1,
+  "user_id": 1,
   "name": "Workout",
   "category_id": 1,
   "category": {
     "id": 1,
+    "user_id": 1,
     "name": "sport"
   },
   "weight": 1
@@ -150,14 +276,14 @@ Response `201`:
 Validation:
 
 - `name` is required and cannot be empty.
-- `category_id` must reference an existing category.
+- `category_id` must reference a category owned by the same user.
 - `weight` must be greater than `0`.
 
 ## Events
 
 ### POST /events
 
-Creates a completed-action event.
+Creates a completed-action event owned by the authenticated user.
 
 Request with an explicit date:
 
@@ -181,6 +307,7 @@ Response `201`:
 ```json
 {
   "id": 10,
+  "user_id": 1,
   "activity_id": 1,
   "date": "2026-04-26"
 }
@@ -188,13 +315,13 @@ Response `201`:
 
 Rules:
 
-- `activity_id` must reference an existing activity.
+- `activity_id` must reference an activity owned by the same user.
 - `date` is optional. When omitted, the backend uses the current local date.
 - Repeating the same `activity_id` and `date` creates another event.
 
 ### GET /events?date=YYYY-MM-DD
 
-Returns events for a specific date.
+Returns events owned by the authenticated user for a specific date.
 
 Response `200`:
 
@@ -202,6 +329,7 @@ Response `200`:
 [
   {
     "id": 10,
+    "user_id": 1,
     "activity_id": 1,
     "date": "2026-04-26"
   }
@@ -212,8 +340,8 @@ Response `200`:
 
 ### GET /stats/heatmap
 
-Returns data for the yearly heatmap. The optional `year` query parameter
-defaults to the current year.
+Returns data for the authenticated user's yearly heatmap. The optional `year`
+query parameter defaults to the current year.
 
 Response `200`:
 
@@ -243,7 +371,7 @@ Rules:
 
 ### GET /stats/streak
 
-Returns the current streak.
+Returns the current streak for the authenticated user.
 
 Response `200`:
 
@@ -259,8 +387,8 @@ The streak counts consecutive days with `score > 0` through `as_of_date`. If
 
 ### GET /stats/summary
 
-Returns aggregate stats. The optional `year` query parameter defaults to the
-current year.
+Returns aggregate stats for the authenticated user. The optional `year` query
+parameter defaults to the current year.
 
 Response `200`:
 
@@ -289,28 +417,31 @@ Expected statuses:
 
 - `200`: successful read.
 - `201`: successful creation.
-- `404`: referenced entity was not found.
-- `409`: category name already exists.
+- `401`: missing, invalid, or expired access token.
+- `404`: user or referenced entity was not found.
+- `409`: user email or category name already exists.
 - `422`: validation error.
 - `500`: unexpected backend error.
 
 ## Expected Frontend Flow
 
-On dashboard load, the frontend requests:
+On dashboard load, the frontend restores the saved access token or asks the user
+to register/log in, then requests user-scoped resources with `Authorization`:
 
-1. `GET /activities`.
-2. `GET /categories`.
-3. `GET /stats/summary`.
-4. `GET /stats/heatmap`.
+1. `POST /auth/register` or `POST /auth/login`.
+2. `GET /activities`.
+3. `GET /categories`.
+4. `GET /stats/summary`.
+5. `GET /stats/heatmap`.
 
 When creating an activity:
 
-1. Create or reuse a category with `POST /categories` / `GET /categories`.
+1. Create or reuse a user-owned category with `POST /categories` / `GET /categories`.
 2. Create the activity with `POST /activities`.
 3. Update local activity and category state.
 
 When logging an activity:
 
-1. `POST /events` with `activity_id`.
+1. `POST /events` with `activity_id` and `Authorization`.
 2. Repeat `GET /stats/summary`.
 3. Repeat `GET /stats/heatmap`.
