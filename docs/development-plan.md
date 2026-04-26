@@ -1,20 +1,16 @@
-# План разработки LifeTracker MVP
+# LifeTracker MVP Development Plan
 
-## Цель
+## Goal
 
-Собрать пет-проект LifeTracker: персональное приложение для трекинга факта выполнения действий по направлениям вроде спорта, обучения и языка.
+Build a local, personal-first LifeTracker app. The user can create categories,
+create activities, log completed actions with one click, and review yearly
+consistency through a heatmap, streak, and summary stats.
 
-MVP должен позволять:
+One activity can be logged multiple times per day. Every click creates a new
+`Event`, and the daily score is the sum of the linked activity weights for that
+date.
 
-- создавать активности;
-- быстро отмечать выполнение активности;
-- видеть heatmap за год;
-- смотреть streak и базовую статистику;
-- запускать весь проект через Docker Compose.
-
-Важное продуктовое решение: одну и ту же активность можно отметить несколько раз в день. Каждый клик создаёт отдельное событие, а дневной score растёт на `weight` активности.
-
-## Архитектура
+## Architecture
 
 ```mermaid
 flowchart LR
@@ -25,146 +21,142 @@ flowchart LR
     Compose --> SQLite
 ```
 
-Структура проекта:
+Project structure:
 
-- `backend/` — FastAPI backend.
-- `frontend/` — React frontend.
-- `docs/` — описание идеи и план разработки.
-- `docker-compose.yml` — запуск frontend и backend одной командой.
+- `backend/`: FastAPI backend.
+- `frontend/`: React frontend.
+- `docs/`: product and API documentation.
+- `docker-compose.yml`: one-command local startup.
 
 ## Backend
 
-Стартовая структура backend:
+Initial backend structure:
 
-- `backend/app/main.py` — создание FastAPI приложения, CORS, подключение API.
-- `backend/app/db.py` — подключение к SQLite, engine, session.
-- `backend/app/models.py` — SQLAlchemy модели.
-- `backend/app/schemas.py` — Pydantic схемы запросов и ответов.
-- `backend/app/api.py` — все MVP endpoints.
+- `backend/app/main.py`: FastAPI application, CORS, lifespan startup.
+- `backend/app/__main__.py`: `python -m backend.app` entrypoint.
+- `backend/app/db.py`: SQLite engine and session management.
+- `backend/app/logging.py`: centralized logging configuration.
+- `backend/app/models.py`: SQLAlchemy models.
+- `backend/app/schemas.py`: Pydantic request and response schemas.
+- `backend/app/api.py`: MVP endpoints.
 
-На старте не нужен отдельный пакет `routers/`. Один `api.py` проще поддерживать, пока API маленький. Разнести endpoints по файлам можно позже, если проект вырастет.
+The API is small enough to keep in one module. It can be split into routers
+later if the surface area grows.
 
-### Модели
+### Models
+
+`Category`:
+
+- `id`
+- `name`
 
 `Activity`:
 
-- `id`;
-- `name`;
-- `category`;
-- `weight`.
+- `id`
+- `name`
+- `category_id`
+- `weight`
 
 `Event`:
 
-- `id`;
-- `activity_id`;
-- `date`.
+- `id`
+- `activity_id`
+- `date`
 
-`Event.date` хранится как календарная дата без времени, в формате `YYYY-MM-DD`.
+`Event.date` is stored as a calendar date, not a timestamp.
 
 ### API
 
-Минимальный набор endpoints:
+- `GET /categories`: list categories.
+- `POST /categories`: create a category.
+- `GET /activities`: list activities with their categories.
+- `POST /activities`: create an activity.
+- `POST /events`: create a completed-action event.
+- `GET /events?date=YYYY-MM-DD`: list events for one date.
+- `GET /stats/heatmap`: return yearly heatmap data.
+- `GET /stats/streak`: return the current streak.
+- `GET /stats/summary`: return aggregate stats.
 
-- `GET /activities` — получить список активностей.
-- `POST /activities` — создать активность.
-- `POST /events` — добавить факт выполнения активности.
-- `GET /events?date=YYYY-MM-DD` — получить события за дату.
-- `GET /stats/heatmap` — получить данные для годовой heatmap.
-- `GET /stats/streak` — получить текущий streak.
-- `GET /stats/summary` — получить краткую статистику.
+### Business Logic
 
-### Бизнес-логика
-
-`POST /events` всегда создаёт новое событие. Если пользователь три раза нажал на одну активность сегодня, в базе будет три события.
-
-Дневной score:
+`POST /events` always creates a new event. If `date` is omitted, the backend uses
+the current local date.
 
 ```text
 day_score = sum(activity.weight for each event on date)
 ```
 
-Streak:
+The current streak:
 
-- считается по последовательным дням с `day_score > 0`;
-- если сегодня нет активности, текущий streak равен `0`;
-- если сегодня есть активность, считаем назад до первого пустого дня.
+- counts consecutive days with `day_score > 0`;
+- is `0` when today has no activity;
+- counts backwards from today until the first empty day.
 
-Для MVP достаточно `SQLAlchemy + SQLite` без Alembic. Миграции можно добавить позже, когда схема начнёт меняться.
+SQLite and SQLAlchemy are enough for the MVP. Alembic can be added when schema
+changes need migrations.
 
 ## Frontend
 
-Стартовая структура frontend:
+Initial frontend structure:
 
-- `frontend/src/App.tsx` — главный экран.
-- `frontend/src/api.ts` — функции для работы с backend API.
-- `frontend/src/components/ActivityButtons.tsx` — кнопки активностей.
-- `frontend/src/components/ActivityForm.tsx` — форма создания активности.
-- `frontend/src/components/YearHeatmap.tsx` — heatmap за год.
-- `frontend/src/components/StatsSummary.tsx` — streak и summary.
+- `frontend/src/App.tsx`: dashboard composition and data loading.
+- `frontend/src/api.ts`: typed API client.
+- `frontend/src/components/ActivityForm.tsx`: category-aware activity form.
+- `frontend/src/components/ActivityButtons.tsx`: one-click activity logging.
+- `frontend/src/components/YearHeatmap.tsx`: yearly heatmap.
+- `frontend/src/components/StatsSummary.tsx`: streak and summary cards.
 
-Главный экран MVP:
+Dashboard:
 
-- форма добавления активности;
-- список кнопок активностей;
-- блок статистики;
-- heatmap за текущий год.
+- activity creation form;
+- activity buttons;
+- summary cards;
+- heatmap for the current year.
 
-После клика по активности frontend отправляет `POST /events`, затем обновляет статистику и heatmap.
+When the user logs an activity, the frontend sends `POST /events` with only
+`activity_id`, then refreshes summary and heatmap data.
 
 ## Docker
 
-Добавить:
+Docker setup:
 
-- `backend/Dockerfile`;
-- `frontend/Dockerfile`;
-- `docker-compose.yml`;
-- `.env.example`.
+- `backend/Dockerfile`: runs the backend through `python -m backend.app`.
+- `frontend/Dockerfile`: runs the Vite dev server.
+- `docker-compose.yml`: starts backend and frontend services.
+- `.env.example`: documents the relevant environment variables.
 
-Целевой запуск:
+Target startup command:
 
 ```shell
 docker compose up --build
 ```
 
-SQLite файл лучше хранить в Docker volume, чтобы данные не пропадали после перезапуска контейнеров.
+The SQLite file is stored in a Docker volume so data is preserved across
+container restarts.
 
-## Тестирование
+## Testing
 
-Backend:
+Backend tests cover:
 
-- создание активности;
-- добавление события;
-- добавление нескольких событий одной активности в один день;
-- расчёт дневного score;
-- расчёт heatmap;
-- расчёт streak.
+- category creation;
+- activity creation;
+- adding an event;
+- adding multiple events for one activity on one day;
+- default event date;
+- daily score calculation;
+- heatmap calculation;
+- streak calculation;
+- summary calculation.
 
-Frontend:
+For the first MVP, backend tests plus a manual browser check are enough.
 
-- загрузка списка активностей;
-- создание активности;
-- клик по активности создаёт событие;
-- после клика обновляются summary и heatmap.
+## MVP Acceptance Criteria
 
-Для первого MVP достаточно backend-тестов и ручной end-to-end проверки через браузер.
-
-## Порядок разработки
-
-1. Инициализировать структуру `backend/`, `frontend/`, `docs/`.
-2. Настроить Docker Compose для backend, frontend и SQLite volume.
-3. Реализовать backend: база, модели, схемы, API.
-4. Добавить backend-тесты на основную бизнес-логику.
-5. Реализовать frontend: API-клиент, форма активности, кнопки, статистика, heatmap.
-6. Подключить frontend к backend.
-7. Проверить сценарий: создать активность, несколько раз отметить её, увидеть рост score.
-8. Описать команды запуска и проверки в `README.md`.
-
-## Критерии готовности MVP
-
-- Проект запускается командой `docker compose up --build`.
-- Можно создать активность.
-- Можно добавить событие по клику.
-- Повторные клики по одной активности в один день создают несколько событий.
-- Heatmap показывает активность по дням.
-- Streak считается по дням с ненулевым score.
-- Summary показывает базовую статистику.
+- The project starts with `docker compose up --build`.
+- A category can be created.
+- An activity can be created and linked to a category.
+- An activity can be logged with one click.
+- Repeated clicks create multiple events.
+- The heatmap shows daily activity.
+- Streak is calculated from non-zero-score days.
+- Summary displays active days, total events, total score, and current streak.

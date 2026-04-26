@@ -3,32 +3,28 @@ import { createRoot } from "react-dom/client";
 
 import {
   Activity,
+  Category,
   createActivity,
+  createCategory,
   createEvent,
   fetchActivities,
+  fetchCategories,
   fetchHeatmap,
   fetchSummary,
   HeatmapResponse,
   SummaryResponse,
 } from "./api";
 import { ActivityButtons } from "./components/ActivityButtons";
-import { ActivityForm } from "./components/ActivityForm";
+import { ActivityForm, ActivityFormInput } from "./components/ActivityForm";
 import { StatsSummary } from "./components/StatsSummary";
 import { YearHeatmap } from "./components/YearHeatmap";
 import "./styles.css";
 
 const currentYear = new Date().getFullYear();
 
-function formatLocalDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
 function App() {
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [heatmap, setHeatmap] = useState<HeatmapResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,13 +34,16 @@ function App() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const loadDashboard = useCallback(async () => {
-    const [nextActivities, nextSummary, nextHeatmap] = await Promise.all([
+    const [nextActivities, nextCategories, nextSummary, nextHeatmap] =
+      await Promise.all([
       fetchActivities(),
+      fetchCategories(),
       fetchSummary(currentYear),
       fetchHeatmap(currentYear),
-    ]);
+      ]);
 
     setActivities(nextActivities);
+    setCategories(nextCategories);
     setSummary(nextSummary);
     setHeatmap(nextHeatmap);
   }, []);
@@ -56,26 +55,40 @@ function App() {
         setError(
           unknownError instanceof Error
             ? unknownError.message
-            : "Не удалось загрузить данные.",
+            : "Could not load data.",
         );
       })
       .finally(() => setIsLoading(false));
   }, [loadDashboard]);
 
-  async function handleCreateActivity(input: Omit<Activity, "id">) {
+  async function handleCreateActivity(input: ActivityFormInput) {
     setIsCreating(true);
     setError(null);
     setNotice(null);
 
     try {
-      const activity = await createActivity(input);
+      const existingCategory = categories.find(
+        (category) =>
+          category.name.toLowerCase() === input.categoryName.toLowerCase(),
+      );
+      const category =
+        existingCategory ?? (await createCategory({ name: input.categoryName }));
+      const activity = await createActivity({
+        name: input.name,
+        category_id: category.id,
+        weight: input.weight,
+      });
+
+      if (!existingCategory) {
+        setCategories((currentCategories) => [...currentCategories, category]);
+      }
       setActivities((currentActivities) => [...currentActivities, activity]);
-      setNotice(`Активность "${activity.name}" создана.`);
+      setNotice(`Activity "${activity.name}" was created.`);
     } catch (unknownError) {
       setError(
         unknownError instanceof Error
           ? unknownError.message
-          : "Не удалось создать активность.",
+          : "Could not create the activity.",
       );
     } finally {
       setIsCreating(false);
@@ -90,7 +103,6 @@ function App() {
     try {
       await createEvent({
         activity_id: activity.id,
-        date: formatLocalDate(new Date()),
       });
       const [nextSummary, nextHeatmap] = await Promise.all([
         fetchSummary(currentYear),
@@ -99,12 +111,12 @@ function App() {
 
       setSummary(nextSummary);
       setHeatmap(nextHeatmap);
-      setNotice(`Отмечено: ${activity.name}.`);
+      setNotice(`Logged: ${activity.name}.`);
     } catch (unknownError) {
       setError(
         unknownError instanceof Error
           ? unknownError.message
-          : "Не удалось отметить активность.",
+          : "Could not log the activity.",
       );
     } finally {
       setMarkingActivityId(null);
@@ -117,15 +129,19 @@ function App() {
         <p className="eyebrow">Personal consistency tracker</p>
         <h1>LifeTracker</h1>
         <p>
-          Создавайте активности, отмечайте повторные выполнения одним нажатием и
-          следите за годовым ритмом.
+          Create activities, log repeated actions with one click, and watch your
+          yearly rhythm.
         </p>
       </section>
 
       {error ? <div className="alert alert-error">{error}</div> : null}
       {notice ? <div className="alert alert-success">{notice}</div> : null}
 
-      <ActivityForm onCreate={handleCreateActivity} isSubmitting={isCreating} />
+      <ActivityForm
+        categories={categories}
+        onCreate={handleCreateActivity}
+        isSubmitting={isCreating}
+      />
 
       <ActivityButtons
         activities={activities}

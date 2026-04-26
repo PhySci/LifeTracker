@@ -1,9 +1,11 @@
 from datetime import date, timedelta
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from backend.app import models, schemas
 from backend.app.db import get_db
@@ -11,6 +13,7 @@ from backend.app.db import get_db
 
 router = APIRouter()
 DbSession = Annotated[Session, Depends(get_db)]
+logger = logging.getLogger(__name__)
 
 
 def _year_bounds(year: int) -> tuple[date, date]:
@@ -56,9 +59,46 @@ def calculate_current_streak(db: Session, as_of_date: date | None = None) -> int
     return streak
 
 
+@router.get("/categories", response_model=list[schemas.CategoryRead])
+def list_categories(db: DbSession) -> list[models.Category]:
+    return list(db.scalars(select(models.Category).order_by(models.Category.name)).all())
+
+
+@router.post(
+    "/categories",
+    response_model=schemas.CategoryRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_category(
+    category_in: schemas.CategoryCreate,
+    db: DbSession,
+) -> models.Category:
+    category = models.Category(**category_in.model_dump())
+    db.add(category)
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Category already exists",
+        ) from None
+
+    db.refresh(category)
+    logger.info("Category created", extra={"category_id": category.id})
+    return category
+
+
 @router.get("/activities", response_model=list[schemas.ActivityRead])
 def list_activities(db: DbSession) -> list[models.Activity]:
-    return list(db.scalars(select(models.Activity).order_by(models.Activity.id)).all())
+    return list(
+        db.scalars(
+            select(models.Activity)
+            .options(selectinload(models.Activity.category))
+            .order_by(models.Activity.id)
+        ).all()
+    )
 
 
 @router.post(
@@ -70,10 +110,22 @@ def create_activity(
     activity_in: schemas.ActivityCreate,
     db: DbSession,
 ) -> models.Activity:
+    category = db.get(models.Category, activity_in.category_id)
+    if category is None:
+        logger.warning(
+            "Activity creation failed because category was not found",
+            extra={"category_id": activity_in.category_id},
+        )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Category not found",
+        )
+
     activity = models.Activity(**activity_in.model_dump())
     db.add(activity)
     db.commit()
     db.refresh(activity)
+    logger.info("Activity created", extra={"activity_id": activity.id})
     return activity
 
 
@@ -85,15 +137,23 @@ def create_activity(
 def create_event(event_in: schemas.EventCreate, db: DbSession) -> models.Event:
     activity = db.get(models.Activity, event_in.activity_id)
     if activity is None:
+        logger.warning(
+            "Event creation failed because activity was not found",
+            extra={"activity_id": event_in.activity_id},
+        )
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Activity not found",
         )
 
-    event = models.Event(**event_in.model_dump())
+    event = models.Event(
+        activity_id=event_in.activity_id,
+        date=event_in.date or date.today(),
+    )
     db.add(event)
     db.commit()
     db.refresh(event)
+    logger.info("Event created", extra={"event_id": event.id, "activity_id": activity.id})
     return event
 
 

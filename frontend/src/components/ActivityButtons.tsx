@@ -18,15 +18,15 @@ export function ActivityButtons({
       <div className="panel-heading">
         <div>
           <p className="eyebrow">One-click logging</p>
-          <h2>Активности</h2>
+          <h2>Activities</h2>
         </div>
         <span className="pill">{activities.length}</span>
       </div>
 
       {activities.length === 0 ? (
         <p className="empty-state">
-          Пока нет активностей. Создайте первую, затем нажимайте на неё каждый
-          раз, когда действие выполнено.
+          No activities yet. Create the first one, then press it each time the
+          action is done.
         </p>
       ) : (
         <div className="activity-grid">
@@ -41,9 +41,9 @@ export function ActivityButtons({
                 onClick={() => void onMark(activity)}
                 type="button"
               >
-                <span>{isMarking ? "Отмечаю..." : activity.name}</span>
+                <span>{isMarking ? "Logging..." : activity.name}</span>
                 <small>
-                  {activity.category} · +{activity.weight}
+                  {activity.category.name} · +{activity.weight}
                 </small>
               </button>
             );

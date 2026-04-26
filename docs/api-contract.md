@@ -1,26 +1,28 @@
-# Контракт взаимодействия Backend и Frontend
+# Backend and Frontend API Contract
 
-## Общие правила
+## General Rules
 
-Backend предоставляет JSON API для React frontend.
-
-Базовый URL задаётся через переменную окружения frontend:
+The backend exposes a JSON API for the React frontend. The frontend base URL is
+configured with:
 
 ```text
 VITE_API_URL=http://localhost:8000
 ```
 
-Все запросы и ответы используют `application/json`.
+All requests and responses use `application/json`. Dates are represented as
+`YYYY-MM-DD` strings. The MVP has no authentication, users, or roles; all data
+belongs to one local user.
 
-Дата передаётся как строка в формате:
+## Entities
 
-```text
-YYYY-MM-DD
+### Category
+
+```json
+{
+  "id": 1,
+  "name": "sport"
+}
 ```
-
-В MVP нет авторизации, пользователей и ролей. Все данные считаются персональными данными одного локального пользователя.
-
-## Сущности
 
 ### Activity
 
@@ -28,17 +30,14 @@ YYYY-MM-DD
 {
   "id": 1,
   "name": "Workout",
-  "category": "sport",
+  "category_id": 1,
+  "category": {
+    "id": 1,
+    "name": "sport"
+  },
   "weight": 1
 }
 ```
-
-Поля:
-
-- `id` — integer, создаётся backend.
-- `name` — string, название активности.
-- `category` — string, категория активности.
-- `weight` — number, вклад активности в дневной score.
 
 ### Event
 
@@ -50,36 +49,70 @@ YYYY-MM-DD
 }
 ```
 
-Поля:
+Every `POST /events` creates a new event. Multiple requests with the same
+`activity_id` and date produce multiple rows.
 
-- `id` — integer, создаётся backend.
-- `activity_id` — integer, ссылка на активность.
-- `date` — string, календарная дата события.
+## Categories
 
-Каждый `POST /events` создаёт новое событие. Если пользователь несколько раз нажал на одну активность в один день, backend хранит несколько событий.
+### GET /categories
 
-## Endpoints
+Returns all categories.
+
+Response `200`:
+
+```json
+[
+  {
+    "id": 1,
+    "name": "sport"
+  }
+]
+```
+
+### POST /categories
+
+Creates a category.
+
+Request:
+
+```json
+{
+  "name": "sport"
+}
+```
+
+Response `201`:
+
+```json
+{
+  "id": 1,
+  "name": "sport"
+}
+```
+
+Validation:
+
+- `name` is required and cannot be empty.
+- `name` must be unique.
 
 ## Activities
 
 ### GET /activities
 
-Возвращает список активностей.
+Returns all activities with their categories.
 
-Ответ `200`:
+Response `200`:
 
 ```json
 [
   {
     "id": 1,
     "name": "Workout",
-    "category": "sport",
-    "weight": 1
-  },
-  {
-    "id": 2,
-    "name": "English",
-    "category": "language",
+    "category_id": 1,
+    "category": {
+      "id": 1,
+      "name": "sport"
+    },
     "weight": 1
   }
 ]
@@ -87,42 +120,46 @@ YYYY-MM-DD
 
 ### POST /activities
 
-Создаёт активность.
+Creates an activity.
 
-Запрос:
+Request:
 
 ```json
 {
   "name": "Workout",
-  "category": "sport",
+  "category_id": 1,
   "weight": 1
 }
 ```
 
-Ответ `201`:
+Response `201`:
 
 ```json
 {
   "id": 1,
   "name": "Workout",
-  "category": "sport",
+  "category_id": 1,
+  "category": {
+    "id": 1,
+    "name": "sport"
+  },
   "weight": 1
 }
 ```
 
-Валидация:
+Validation:
 
-- `name` обязателен и не должен быть пустым.
-- `category` обязателен и не должен быть пустым.
-- `weight` должен быть больше `0`.
+- `name` is required and cannot be empty.
+- `category_id` must reference an existing category.
+- `weight` must be greater than `0`.
 
 ## Events
 
 ### POST /events
 
-Создаёт факт выполнения активности.
+Creates a completed-action event.
 
-Запрос:
+Request with an explicit date:
 
 ```json
 {
@@ -131,7 +168,15 @@ YYYY-MM-DD
 }
 ```
 
-Ответ `201`:
+Request using today's date:
+
+```json
+{
+  "activity_id": 1
+}
+```
+
+Response `201`:
 
 ```json
 {
@@ -141,33 +186,22 @@ YYYY-MM-DD
 }
 ```
 
-Правила:
+Rules:
 
-- `activity_id` должен ссылаться на существующую активность.
-- `date` обязателен.
-- Повторный запрос с тем же `activity_id` и `date` создаёт новое событие.
+- `activity_id` must reference an existing activity.
+- `date` is optional. When omitted, the backend uses the current local date.
+- Repeating the same `activity_id` and `date` creates another event.
 
 ### GET /events?date=YYYY-MM-DD
 
-Возвращает события за конкретную дату.
+Returns events for a specific date.
 
-Пример:
-
-```text
-GET /events?date=2026-04-26
-```
-
-Ответ `200`:
+Response `200`:
 
 ```json
 [
   {
     "id": 10,
-    "activity_id": 1,
-    "date": "2026-04-26"
-  },
-  {
-    "id": 11,
     "activity_id": 1,
     "date": "2026-04-26"
   }
@@ -178,19 +212,10 @@ GET /events?date=2026-04-26
 
 ### GET /stats/heatmap
 
-Возвращает данные для heatmap.
+Returns data for the yearly heatmap. The optional `year` query parameter
+defaults to the current year.
 
-Query-параметры:
-
-- `year` — optional integer. Если не передан, backend использует текущий год.
-
-Пример:
-
-```text
-GET /stats/heatmap?year=2026
-```
-
-Ответ `200`:
+Response `200`:
 
 ```json
 {
@@ -210,17 +235,17 @@ GET /stats/heatmap?year=2026
 }
 ```
 
-Правила:
+Rules:
 
-- `days` содержит все дни выбранного года.
-- `score` считается как сумма `weight` всех событий за дату.
-- `event_count` показывает количество событий за дату.
+- `days` contains every day in the selected year.
+- `score` is the sum of activity weights for the date.
+- `event_count` is the number of events for the date.
 
 ### GET /stats/streak
 
-Возвращает текущий streak.
+Returns the current streak.
 
-Ответ `200`:
+Response `200`:
 
 ```json
 {
@@ -229,20 +254,15 @@ GET /stats/heatmap?year=2026
 }
 ```
 
-Правила:
-
-- Streak считается по последовательным дням с `score > 0`.
-- Если на `as_of_date` нет активности, `current_streak` равен `0`.
+The streak counts consecutive days with `score > 0` through `as_of_date`. If
+`as_of_date` has no activity, `current_streak` is `0`.
 
 ### GET /stats/summary
 
-Возвращает краткую статистику.
+Returns aggregate stats. The optional `year` query parameter defaults to the
+current year.
 
-Query-параметры:
-
-- `year` — optional integer. Если не передан, backend использует текущий год.
-
-Ответ `200`:
+Response `200`:
 
 ```json
 {
@@ -254,68 +274,43 @@ Query-параметры:
 }
 ```
 
-Поля:
+Fields:
 
-- `active_days` — количество дней в году, где `score > 0`.
-- `total_events` — общее количество событий за год.
-- `total_score` — сумма score за год.
-- `current_streak` — текущий streak на сегодня.
+- `active_days`: days in the year where `score > 0`.
+- `total_events`: total events in the year.
+- `total_score`: sum of daily scores in the year.
+- `current_streak`: current streak through today.
 
-## Ошибки
+## Errors
 
-Для ошибок backend возвращает стандартный JSON.
+The backend returns FastAPI's standard JSON error format.
 
-Пример `422`:
+Expected statuses:
 
-```json
-{
-  "detail": [
-    {
-      "loc": ["body", "weight"],
-      "msg": "Input should be greater than 0",
-      "type": "greater_than"
-    }
-  ]
-}
-```
+- `200`: successful read.
+- `201`: successful creation.
+- `404`: referenced entity was not found.
+- `409`: category name already exists.
+- `422`: validation error.
+- `500`: unexpected backend error.
 
-Пример `404`:
+## Expected Frontend Flow
 
-```json
-{
-  "detail": "Activity not found"
-}
-```
-
-Ожидаемые статусы:
-
-- `200` — успешное чтение.
-- `201` — успешное создание.
-- `404` — связанная сущность не найдена.
-- `422` — ошибка валидации.
-- `500` — непредвиденная ошибка backend.
-
-## Ожидаемый frontend flow
-
-При открытии главного экрана frontend выполняет:
+On dashboard load, the frontend requests:
 
 1. `GET /activities`.
-2. `GET /stats/summary`.
-3. `GET /stats/heatmap`.
+2. `GET /categories`.
+3. `GET /stats/summary`.
+4. `GET /stats/heatmap`.
 
-При создании активности:
+When creating an activity:
 
-1. `POST /activities`.
-2. Обновить локальный список активностей или повторить `GET /activities`.
+1. Create or reuse a category with `POST /categories` / `GET /categories`.
+2. Create the activity with `POST /activities`.
+3. Update local activity and category state.
 
-При клике по активности:
+When logging an activity:
 
-1. `POST /events` с `activity_id` и сегодняшней датой.
-2. Повторить `GET /stats/summary`.
-3. Повторить `GET /stats/heatmap`.
-
-Для MVP можно не делать optimistic update. Надёжнее сначала дождаться ответа backend, затем обновить статистику.
-
-## Совместимость
-
-Контракт рассчитан на MVP. Если API будет меняться, изменения нужно сначала фиксировать в этом документе, а затем обновлять backend и frontend.
+1. `POST /events` with `activity_id`.
+2. Repeat `GET /stats/summary`.
+3. Repeat `GET /stats/heatmap`.

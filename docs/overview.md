@@ -1,79 +1,97 @@
-# Техническое задание: трекер консистентности действий
+# Technical Brief: Consistency Tracker
 
-## 1. Постановка задачи
+## 1. Problem
 
-Разработать персональное приложение для трекинга факта выполнения
-действий по направлениям (спорт, обучение, язык) с визуализацией
-прогресса в виде heatmap.
+Build a personal app for tracking completed actions across areas such as sport,
+learning, and language practice. Progress is visualized with a yearly heatmap.
 
-Это не task manager. Система фиксирует только факт выполнения действия.
+This is not a task manager. The system records only the fact that an action was
+completed.
 
-## 2. Основные сценарии
+## 2. Core Scenarios
 
--   Добавление активности (1 клик)
--   Просмотр heatmap за год
--   Просмотр статистики (streak, активные дни)
+- Create a category.
+- Create an activity in a category.
+- Log an activity with one click.
+- View a yearly heatmap.
+- View streak and active-day statistics.
 
-## 3. Сущности
+## 3. Entities
+
+### Category
+
+- `id`
+- `name`
 
 ### Activity
 
--   id
--   name
--   category
--   weight
+- `id`
+- `name`
+- `category_id`
+- `weight`
 
 ### Event
 
--   id
--   activity_id
--   date (YYYY-MM-DD)
+- `id`
+- `activity_id`
+- `date` (`YYYY-MM-DD`)
 
-## 4. Бизнес-логика
+## 4. Business Logic
 
-### Day score
+### Day Score
 
-sum(weight)
+```text
+day_score = sum(activity.weight for each event on the date)
+```
 
 ### Streak
 
-последовательные дни с активностью \> 0
+The current streak is the number of consecutive days through today where
+`day_score > 0`. If today has no activity, the streak is `0`.
 
-## 5. Архитектура
+## 5. Architecture
 
-Frontend (React) → Backend (FastAPI) → DB (SQLite)
+```text
+React frontend -> FastAPI backend -> SQLite database
+```
 
 ## 6. API
 
-GET /activities\
-POST /activities
+- `GET /categories`
+- `POST /categories`
+- `GET /activities`
+- `POST /activities`
+- `POST /events`
+- `GET /events?date=YYYY-MM-DD`
+- `GET /stats/heatmap`
+- `GET /stats/streak`
+- `GET /stats/summary`
 
-POST /events\
-GET /events?date=
+## 7. Database
 
-GET /stats/heatmap\
-GET /stats/streak\
-GET /stats/summary
-
-## 7. База данных
-
-activities(id, name, category, weight)\
-events(id, activity_id, date)
+- `categories(id, name)`
+- `activities(id, name, category_id, weight)`
+- `events(id, activity_id, date)`
 
 ## 8. Frontend
 
--   heatmap (365 дней)
--   кнопки активностей
--   mobile-first
+- Category-aware activity creation form.
+- Activity buttons for one-click logging.
+- Yearly heatmap.
+- Summary cards for streak, active days, events, and score.
 
-## 9. Ограничения
+## 9. Constraints
 
--   без auth
--   без мультиюзерности
--   без ML
+- No authentication.
+- No multi-user support.
+- No machine learning.
 
-## 10. Критерии готовности
+## 10. Acceptance Criteria
 
--   можно добавлять события
--   работает heatmap
--   считается streak
+- Categories can be created.
+- Activities can be created and linked to categories.
+- Events can be logged.
+- Repeated clicks create repeated events.
+- Heatmap works.
+- Streak is calculated correctly.
+- Summary stats are displayed.

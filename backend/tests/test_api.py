@@ -30,15 +30,24 @@ def client(tmp_path) -> Generator[TestClient, None, None]:
     Base.metadata.drop_all(bind=engine)
 
 
+def create_category(client: TestClient, name: str = "sport") -> dict:
+    response = client.post("/categories", json={"name": name})
+    assert response.status_code == 201
+    return response.json()
+
+
 def create_activity(
     client: TestClient,
     name: str = "Workout",
-    category: str = "sport",
+    category_id: int | None = None,
     weight: float = 1,
 ) -> dict:
+    if category_id is None:
+        category_id = create_category(client)["id"]
+
     response = client.post(
         "/activities",
-        json={"name": name, "category": category, "weight": weight},
+        json={"name": name, "category_id": category_id, "weight": weight},
     )
     assert response.status_code == 201
     return response.json()
@@ -51,6 +60,20 @@ def create_event(client: TestClient, activity_id: int, event_date: date) -> dict
     )
     assert response.status_code == 201
     return response.json()
+
+
+def test_activity_creation_uses_category_entity(client: TestClient) -> None:
+    category = create_category(client, name="sport")
+
+    activity = create_activity(client, category_id=category["id"], weight=2)
+
+    assert activity == {
+        "id": activity["id"],
+        "name": "Workout",
+        "category_id": category["id"],
+        "category": category,
+        "weight": 2.0,
+    }
 
 
 def test_multiple_events_same_activity_same_day_are_stored(client: TestClient) -> None:
@@ -77,8 +100,14 @@ def test_multiple_events_same_activity_same_day_are_stored(client: TestClient) -
 def test_heatmap_contains_whole_year_and_weighted_day_scores(
     client: TestClient,
 ) -> None:
-    workout = create_activity(client, name="Workout", category="sport", weight=2)
-    reading = create_activity(client, name="Reading", category="learning", weight=0.5)
+    workout = create_activity(client, name="Workout", weight=2)
+    learning = create_category(client, name="learning")
+    reading = create_activity(
+        client,
+        name="Reading",
+        category_id=learning["id"],
+        weight=0.5,
+    )
     event_date = date(2026, 4, 26)
 
     create_event(client, workout["id"], event_date)
@@ -137,8 +166,14 @@ def test_current_streak_is_zero_when_today_has_no_activity(
 def test_summary_aggregates_year_stats_and_current_streak(
     client: TestClient,
 ) -> None:
-    workout = create_activity(client, name="Workout", category="sport", weight=2)
-    reading = create_activity(client, name="Reading", category="learning", weight=0.5)
+    workout = create_activity(client, name="Workout", weight=2)
+    learning = create_category(client, name="learning")
+    reading = create_activity(
+        client,
+        name="Reading",
+        category_id=learning["id"],
+        weight=0.5,
+    )
     today = date.today()
 
     create_event(client, workout["id"], today)
@@ -156,3 +191,12 @@ def test_summary_aggregates_year_stats_and_current_streak(
         "total_score": 5.0,
         "current_streak": 2,
     }
+
+
+def test_event_date_defaults_to_today(client: TestClient) -> None:
+    activity = create_activity(client)
+
+    response = client.post("/events", json={"activity_id": activity["id"]})
+
+    assert response.status_code == 201
+    assert response.json()["date"] == date.today().isoformat()

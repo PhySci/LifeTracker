@@ -1,13 +1,24 @@
 import { FormEvent, useState } from "react";
 
-import { Activity } from "../api";
+import { Category } from "../api";
 
-type ActivityFormProps = {
-  isSubmitting: boolean;
-  onCreate: (input: Omit<Activity, "id">) => Promise<void>;
+export type ActivityFormInput = {
+  name: string;
+  categoryName: string;
+  weight: number;
 };
 
-export function ActivityForm({ isSubmitting, onCreate }: ActivityFormProps) {
+type ActivityFormProps = {
+  categories: Category[];
+  isSubmitting: boolean;
+  onCreate: (input: ActivityFormInput) => Promise<void>;
+};
+
+export function ActivityForm({
+  categories,
+  isSubmitting,
+  onCreate,
+}: ActivityFormProps) {
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
   const [weight, setWeight] = useState("1");
@@ -22,7 +33,7 @@ export function ActivityForm({ isSubmitting, onCreate }: ActivityFormProps) {
 
     await onCreate({
       name: name.trim(),
-      category: category.trim(),
+      categoryName: category.trim(),
       weight: parsedWeight,
     });
 
@@ -35,14 +46,14 @@ export function ActivityForm({ isSubmitting, onCreate }: ActivityFormProps) {
     <section className="panel">
       <div className="panel-heading">
         <div>
-          <p className="eyebrow">Новая привычка</p>
-          <h2>Создать активность</h2>
+          <p className="eyebrow">New habit</p>
+          <h2>Create activity</h2>
         </div>
       </div>
 
       <form className="activity-form" onSubmit={handleSubmit}>
         <label>
-          Название
+          Name
           <input
             value={name}
             onChange={(event) => setName(event.target.value)}
@@ -52,17 +63,23 @@ export function ActivityForm({ isSubmitting, onCreate }: ActivityFormProps) {
         </label>
 
         <label>
-          Категория
+          Category
           <input
+            list="category-options"
             value={category}
             onChange={(event) => setCategory(event.target.value)}
             placeholder="sport"
             required
           />
+          <datalist id="category-options">
+            {categories.map((categoryOption) => (
+              <option key={categoryOption.id} value={categoryOption.name} />
+            ))}
+          </datalist>
         </label>
 
         <label>
-          Вес
+          Weight
           <input
             min="0.1"
             step="0.1"
@@ -74,7 +91,7 @@ export function ActivityForm({ isSubmitting, onCreate }: ActivityFormProps) {
         </label>
 
         <button disabled={isSubmitting} type="submit">
-          {isSubmitting ? "Создаю..." : "Добавить"}
+          {isSubmitting ? "Creating..." : "Add"}
         </button>
       </form>
     </section>

@@ -39,14 +39,14 @@ export function YearHeatmap({ heatmap, isLoading }: YearHeatmapProps) {
           <p className="eyebrow">Year heatmap</p>
           <h2>{heatmap?.year ?? new Date().getFullYear()}</h2>
         </div>
-        {isLoading ? <span className="pill">Загрузка</span> : null}
+        {isLoading ? <span className="pill">Loading</span> : null}
       </div>
 
       {days.length === 0 ? (
-        <p className="empty-state">Heatmap появится после загрузки данных.</p>
+        <p className="empty-state">The heatmap appears after data is loaded.</p>
       ) : (
         <>
-          <div className="heatmap-scroll" aria-label="Годовая heatmap">
+          <div className="heatmap-scroll" aria-label="Year heatmap">
             <div className="heatmap-grid">
               {days.map((day) => (
                 <span
@@ -61,11 +61,11 @@ export function YearHeatmap({ heatmap, isLoading }: YearHeatmapProps) {
           </div>
 
           <div className="heatmap-legend">
-            <span>Меньше</span>
+            <span>Less</span>
             {[0, 1, 2, 3, 4].map((level) => (
               <span className="heatmap-cell" data-level={level} key={level} />
             ))}
-            <span>Больше</span>
+            <span>More</span>
           </div>
         </>
       )}

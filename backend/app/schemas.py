@@ -1,4 +1,6 @@
-from datetime import date
+from __future__ import annotations
+
+from datetime import date as DateType
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
@@ -7,9 +9,20 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 NonEmptyString = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
+class CategoryCreate(BaseModel):
+    name: NonEmptyString
+
+
+class CategoryRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+
+
 class ActivityCreate(BaseModel):
     name: NonEmptyString
-    category: NonEmptyString
+    category_id: int
     weight: float = Field(default=1, gt=0)
 
 
@@ -18,13 +31,14 @@ class ActivityRead(BaseModel):
 
     id: int
     name: str
-    category: str
+    category_id: int
+    category: CategoryRead
     weight: float
 
 
 class EventCreate(BaseModel):
     activity_id: int
-    date: date
+    date: DateType | None = None
 
 
 class EventRead(BaseModel):
@@ -32,11 +46,11 @@ class EventRead(BaseModel):
 
     id: int
     activity_id: int
-    date: date
+    date: DateType
 
 
 class HeatmapDay(BaseModel):
-    date: date
+    date: DateType
     score: float
     event_count: int
 
@@ -48,7 +62,7 @@ class HeatmapResponse(BaseModel):
 
 class StreakResponse(BaseModel):
     current_streak: int
-    as_of_date: date
+    as_of_date: DateType
 
 
 class SummaryResponse(BaseModel):

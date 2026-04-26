@@ -1,17 +1,28 @@
-from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+import logging
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.api import router
 from backend.app.db import init_db
+from backend.app.logging import configure_logging
+
+
+configure_logging()
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    logger.info("Starting LifeTracker API")
     init_db()
-    yield
+    logger.info("Database schema initialized")
+    try:
+        yield
+    finally:
+        logger.info("Stopping LifeTracker API")
 
 
 app = FastAPI(title="LifeTracker API", lifespan=lifespan)

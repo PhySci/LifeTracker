@@ -1,48 +1,96 @@
 # LifeTracker
 
-Локальное personal-first приложение для трекинга факта выполнения активностей. Один клик по активности создаёт отдельное событие, поэтому одну активность можно отметить несколько раз в день.
+LifeTracker is a local, personal-first app for tracking completed actions. Each
+click on an activity creates a separate event, so the same activity can be logged
+multiple times per day.
 
-## Стек
+## Stack
 
 - Backend: FastAPI, SQLAlchemy, SQLite.
 - Frontend: React, TypeScript, Vite.
-- Запуск: Docker Compose.
+- Runtime: Docker Compose.
 
-## Запуск Через Docker Compose
+## Run With Docker Compose
 
 ```shell
 docker compose up --build
 ```
 
-После старта:
+After startup:
 
-- frontend: http://localhost:5173
-- backend healthcheck: http://localhost:8000/health
+- Frontend: http://localhost:5173
+- Backend health check: http://localhost:8000/health
 - OpenAPI: http://localhost:8000/docs
 
-SQLite хранится в Docker volume `lifetracker_lifetracker-data`, поэтому данные переживают перезапуск контейнеров.
+SQLite is stored in the `lifetracker_lifetracker-data` Docker volume, so data
+survives container restarts.
 
-## Ручная Проверка MVP
+## Entity Model
 
-1. Откройте http://localhost:5173.
-2. Создайте активность через форму `Название / Категория / Вес`.
-3. Нажмите на созданную активность несколько раз.
-4. Проверьте, что растут `total_events`, `total_score` и ячейка сегодняшнего дня в heatmap.
+```mermaid
+erDiagram
+    CATEGORIES ||--o{ ACTIVITIES : contains
+    ACTIVITIES ||--o{ EVENTS : logs
 
-Проверить API отдельно:
+    CATEGORIES {
+        integer id PK
+        string name UK
+    }
+
+    ACTIVITIES {
+        integer id PK
+        string name
+        integer category_id FK
+        float weight
+    }
+
+    EVENTS {
+        integer id PK
+        integer activity_id FK
+        date date
+    }
+```
+
+## Tables
+
+- `categories`: stores reusable activity categories. `name` is unique.
+- `activities`: stores actions the user can log. Each activity belongs to one
+  category through `category_id` and contributes `weight` to the daily score.
+- `events`: stores each completed action. Every `POST /events` creates a new
+  row. If no date is provided, the backend uses the current local date.
+
+The daily score is the sum of `activity.weight` for all events on a calendar
+date. The current streak is the number of consecutive days through today with a
+daily score greater than zero.
+
+## Manual MVP Check
+
+1. Open http://localhost:5173.
+2. Create an activity with a name, category, and weight.
+3. Click the created activity several times.
+4. Check that `total_events`, `total_score`, and today's heatmap cell increase.
+
+Check the API separately:
 
 ```shell
 curl http://localhost:8000/health
+curl http://localhost:8000/categories
 curl http://localhost:8000/activities
 curl http://localhost:8000/stats/summary
 ```
 
-## Локальная Разработка
+## Local Development
 
 Backend:
 
 ```shell
-uv run uvicorn backend.app.main:app --reload
+uv run python -m backend.app
+```
+
+Backend with reload:
+
+```shell
+RELOAD=true uv run python -m backend.app
 ```
 
 Frontend:
@@ -53,4 +101,5 @@ npm install
 npm run dev
 ```
 
-Для frontend API URL задаётся переменной `VITE_API_URL`, по умолчанию используется `http://localhost:8000`.
+The frontend API URL is controlled by `VITE_API_URL`; the default is
+`http://localhost:8000`.

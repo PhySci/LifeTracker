@@ -23,21 +23,21 @@ export function StatsSummary({ isLoading, summary }: StatsSummaryProps) {
           <p className="eyebrow">{data.year}</p>
           <h2>Summary</h2>
         </div>
-        {isLoading ? <span className="pill">Загрузка</span> : null}
+        {isLoading ? <span className="pill">Loading</span> : null}
       </div>
 
       <div className="stats-grid">
         <article>
           <strong>{data.current_streak}</strong>
-          <span>streak дней</span>
+          <span>streak days</span>
         </article>
         <article>
           <strong>{data.active_days}</strong>
-          <span>активных дней</span>
+          <span>active days</span>
         </article>
         <article>
           <strong>{data.total_events}</strong>
-          <span>событий</span>
+          <span>events</span>
         </article>
         <article>
           <strong>{data.total_score}</strong>

@@ -3,13 +3,29 @@ const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 export type Activity = {
   id: number;
   name: string;
-  category: string;
+  category_id: number;
+  category: Category;
   weight: number;
+};
+
+export type ActivityCreate = {
+  name: string;
+  category_id: number;
+  weight: number;
+};
+
+export type Category = {
+  id: number;
+  name: string;
+};
+
+export type CategoryCreate = {
+  name: string;
 };
 
 export type EventCreate = {
   activity_id: number;
-  date: string;
+  date?: string;
 };
 
 export type HeatmapDay = {
@@ -52,8 +68,19 @@ export function fetchActivities(): Promise<Activity[]> {
   return request<Activity[]>("/activities");
 }
 
-export function createActivity(input: Omit<Activity, "id">): Promise<Activity> {
+export function createActivity(input: ActivityCreate): Promise<Activity> {
   return request<Activity>("/activities", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function fetchCategories(): Promise<Category[]> {
+  return request<Category[]>("/categories");
+}
+
+export function createCategory(input: CategoryCreate): Promise<Category> {
+  return request<Category>("/categories", {
     method: "POST",
     body: JSON.stringify(input),
   });
