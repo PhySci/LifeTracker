@@ -34,7 +34,8 @@ Initial backend structure:
 
 - `backend/app/main.py`: FastAPI application, CORS, lifespan startup.
 - `backend/app/__main__.py`: `python -m backend.app` entrypoint.
-- `backend/app/db.py`: SQLite engine and session management.
+- `backend/app/db.py`: SQLite engine, session management, and Alembic startup
+  migration runner.
 - `backend/app/logging.py`: centralized logging configuration.
 - `backend/app/models.py`: SQLAlchemy models.
 - `backend/app/schemas.py`: Pydantic request and response schemas.
@@ -109,8 +110,8 @@ The current streak:
 - is `0` when today has no activity;
 - counts backwards from today until the first empty day.
 
-SQLite and SQLAlchemy are enough for the MVP. Alembic can be added when schema
-changes need migrations.
+SQLite, SQLAlchemy, and Alembic are enough for the MVP. The backend applies
+pending Alembic migrations on startup.
 
 ## Frontend
 

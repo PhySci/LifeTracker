@@ -2,8 +2,10 @@ from collections.abc import Generator
 from datetime import date, timedelta
 
 import pytest
+from alembic import command
+from alembic.config import Config
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from backend.app.db import Base, get_db
@@ -402,3 +404,217 @@ def test_event_date_defaults_to_today(client: TestClient) -> None:
     assert response.status_code == 201
     assert response.json()["user_id"] == user["id"]
     assert response.json()["date"] == date.today().isoformat()
+
+
+def test_alembic_migration_adds_user_scoping_columns_to_legacy_schema(tmp_path) -> None:
+    database_url = f"sqlite:///{tmp_path / 'legacy.db'}"
+    legacy_engine = create_engine(database_url, connect_args={"check_same_thread": False})
+
+    with legacy_engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                CREATE TABLE users (
+                    id INTEGER PRIMARY KEY,
+                    name VARCHAR(120) NOT NULL,
+                    email VARCHAR(255) NOT NULL,
+                    password VARCHAR(255) NOT NULL
+                )
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                CREATE TABLE categories (
+                    id INTEGER PRIMARY KEY,
+                    user_id INTEGER NOT NULL,
+                    name VARCHAR(80) NOT NULL
+                )
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                CREATE TABLE activities (
+                    id INTEGER PRIMARY KEY,
+                    name VARCHAR(120) NOT NULL,
+                    category_id INTEGER NOT NULL,
+                    weight FLOAT NOT NULL
+                )
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                CREATE TABLE events (
+                    id INTEGER PRIMARY KEY,
+                    activity_id INTEGER NOT NULL,
+                    date DATE NOT NULL
+                )
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                INSERT INTO users (id, name, email, password)
+                VALUES (1, 'Demo User', 'demo@example.com', 'password')
+                """
+            )
+        )
+        connection.execute(
+            text("INSERT INTO categories (id, user_id, name) VALUES (10, 1, 'sport')")
+        )
+        connection.execute(
+            text(
+                """
+                INSERT INTO activities (id, name, category_id, weight)
+                VALUES (20, 'Workout', 10, 2)
+                """
+            )
+        )
+        connection.execute(
+            text("INSERT INTO events (id, activity_id, date) VALUES (30, 20, '2026-04-26')")
+        )
+
+    alembic_config = Config("alembic.ini")
+    alembic_config.set_main_option("sqlalchemy.url", database_url)
+    command.upgrade(alembic_config, "head")
+
+    with legacy_engine.connect() as connection:
+        activity_columns = {
+            row[1] for row in connection.execute(text("PRAGMA table_info(activities)"))
+        }
+        event_columns = {
+            row[1] for row in connection.execute(text("PRAGMA table_info(events)"))
+        }
+        activity_user_id = connection.execute(
+            text("SELECT user_id FROM activities WHERE id = 20")
+        ).scalar_one()
+        event_user_id = connection.execute(
+            text("SELECT user_id FROM events WHERE id = 30")
+        ).scalar_one()
+        current_revision = connection.execute(
+            text("SELECT version_num FROM alembic_version")
+        ).scalar_one()
+
+    assert "user_id" in activity_columns
+    assert "user_id" in event_columns
+    assert activity_user_id == 1
+    assert event_user_id == 1
+    assert current_revision == "20260426_0001"
+
+
+def test_alembic_migration_creates_schema_for_empty_database(tmp_path) -> None:
+    database_url = f"sqlite:///{tmp_path / 'fresh.db'}"
+    fresh_engine = create_engine(database_url, connect_args={"check_same_thread": False})
+    alembic_config = Config("alembic.ini")
+    alembic_config.set_main_option("sqlalchemy.url", database_url)
+
+    command.upgrade(alembic_config, "head")
+
+    with fresh_engine.connect() as connection:
+        tables = {
+            row[0]
+            for row in connection.execute(
+                text("SELECT name FROM sqlite_master WHERE type = 'table'")
+            )
+        }
+        activity_columns = {
+            row[1] for row in connection.execute(text("PRAGMA table_info(activities)"))
+        }
+        event_columns = {
+            row[1] for row in connection.execute(text("PRAGMA table_info(events)"))
+        }
+
+    assert {"users", "categories", "activities", "events", "alembic_version"} <= tables
+    assert "user_id" in activity_columns
+    assert "user_id" in event_columns
+
+
+def test_alembic_migration_recovers_pre_category_legacy_schema(tmp_path) -> None:
+    database_url = f"sqlite:///{tmp_path / 'pre_category.db'}"
+    legacy_engine = create_engine(database_url, connect_args={"check_same_thread": False})
+
+    with legacy_engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                CREATE TABLE users (
+                    id INTEGER PRIMARY KEY,
+                    name VARCHAR(120) NOT NULL,
+                    email VARCHAR(255) NOT NULL,
+                    password VARCHAR(255) NOT NULL
+                )
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                CREATE TABLE categories (
+                    id INTEGER PRIMARY KEY,
+                    user_id INTEGER NOT NULL,
+                    name VARCHAR(80) NOT NULL
+                )
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                CREATE TABLE activities (
+                    id INTEGER PRIMARY KEY,
+                    name VARCHAR(120) NOT NULL,
+                    weight FLOAT NOT NULL
+                )
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                CREATE TABLE events (
+                    id INTEGER PRIMARY KEY,
+                    activity_id INTEGER NOT NULL,
+                    date DATE NOT NULL
+                )
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                INSERT INTO users (id, name, email, password)
+                VALUES (1, 'Demo User', 'demo@example.com', 'password')
+                """
+            )
+        )
+        connection.execute(
+            text("INSERT INTO categories (id, user_id, name) VALUES (10, 1, 'sport')")
+        )
+        connection.execute(
+            text("INSERT INTO activities (id, name, weight) VALUES (20, 'Workout', 2)")
+        )
+        connection.execute(
+            text("INSERT INTO events (id, activity_id, date) VALUES (30, 20, '2026-04-26')")
+        )
+
+    alembic_config = Config("alembic.ini")
+    alembic_config.set_main_option("sqlalchemy.url", database_url)
+    command.upgrade(alembic_config, "head")
+
+    with legacy_engine.connect() as connection:
+        activity = connection.execute(
+            text("SELECT user_id, category_id FROM activities WHERE id = 20")
+        ).one()
+        event_user_id = connection.execute(
+            text("SELECT user_id FROM events WHERE id = 30")
+        ).scalar_one()
+
+    assert activity.user_id == 1
+    assert activity.category_id == 10
+    assert event_user_id == 1

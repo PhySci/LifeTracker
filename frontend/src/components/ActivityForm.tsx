@@ -46,14 +46,14 @@ export function ActivityForm({
     <section className="panel">
       <div className="panel-heading">
         <div>
-          <p className="eyebrow">New habit</p>
-          <h2>Create activity</h2>
+          <p className="eyebrow mono">Новая привычка</p>
+          <h2>Создать активность</h2>
         </div>
       </div>
 
       <form className="activity-form" onSubmit={handleSubmit}>
         <label>
-          Name
+          Название
           <input
             value={name}
             onChange={(event) => setName(event.target.value)}
@@ -63,7 +63,7 @@ export function ActivityForm({
         </label>
 
         <label>
-          Category
+          Категория
           <input
             list="category-options"
             value={category}
@@ -79,7 +79,7 @@ export function ActivityForm({
         </label>
 
         <label>
-          Weight
+          Вес
           <input
             min="0.1"
             step="0.1"
@@ -91,7 +91,7 @@ export function ActivityForm({
         </label>
 
         <button disabled={isSubmitting} type="submit">
-          {isSubmitting ? "Creating..." : "Add"}
+          {isSubmitting ? "Создаю..." : "Добавить"}
         </button>
       </form>
     </section>

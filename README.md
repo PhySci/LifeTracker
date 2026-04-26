@@ -106,6 +106,13 @@ curl http://localhost:8000/stats/summary -H "Authorization: Bearer $TOKEN"
 
 ## Local Development
 
+Database migrations run automatically when the backend starts. To run them
+manually:
+
+```shell
+uv run alembic upgrade head
+```
+
 Backend:
 
 ```shell
