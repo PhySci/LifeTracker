@@ -1,31 +1,76 @@
 # LifeTracker
 
-LifeTracker is a local, personal-first app for tracking completed actions. Each
-click on an activity creates a separate event, so the same activity can be logged
-multiple times per day.
+LifeTracker is a personal consistency tracker built around a simple idea:
+progress is easier to keep when logging it is almost frictionless. It is not a
+task manager, calendar, or productivity inbox. It only answers one question:
+**did I do the action today, and how consistently am I showing up over time?**
 
-## Stack
+The project was inspired by the contribution tiles on a GitHub profile. That
+tiny grid is surprisingly motivating: it turns invisible effort into a visible
+pattern. LifeTracker brings that concept into real life, where the "commits" are
+workouts, reading sessions, language practice, walks, or any other action worth
+showing up for.
 
-- Backend: FastAPI, SQLAlchemy, SQLite.
-- Frontend: React, TypeScript, Vite.
-- Runtime: Docker Compose.
+It also makes the uncomfortable part visible. Every empty tile is a day when you
+were lazy, distracted, or simply chose not to show up. At the same time, the app
+shows how many days are still left in the year, so the calendar feels less like
+judgment and more like a reminder that there is still time in reserve.
 
-## Run With Docker Compose
+The app is designed for repeated, lightweight actions: workouts, reading,
+language practice, walking, meditation, study sessions, or any other habit where
+one day can contain more than one meaningful effort.
 
-```shell
-docker compose up --build
+## Core Idea
+
+Most trackers treat a day as a checkbox. LifeTracker treats every completed
+action as an event. If you work out twice, read twice, or do two study blocks,
+both actions are recorded. Each activity has a weight, and the day score is the
+sum of all logged activity weights.
+
+This gives a more honest view of momentum:
+
+- one click creates one event;
+- multiple clicks on the same day are allowed;
+- the heatmap shows intensity, not just presence;
+- streaks are based on days with a non-zero score;
+- each user has a private activity space.
+
+## What It Shows
+
+The main screen is built around a year-first view. It highlights how much of the
+year has passed, how many days are left, and where the active days are clustered.
+The goal is to make consistency visible without turning it into project
+management.
+
+Main interface pieces:
+
+- **Year heatmap**: a calendar-style grid for daily activity intensity.
+- **Today view**: quick action buttons for logging completed activities.
+- **Activities view**: activity creation with category and weight.
+- **Summary cards**: current streak, active days, total events, and total score.
+- **User space**: authentication keeps categories, activities, and events scoped
+  to the current user.
+
+## Product Model
+
+LifeTracker has four core entities:
+
+- `User`: owns a private tracking space.
+- `Category`: groups related activities, such as sport or learning.
+- `Activity`: an action the user can log; it has a weight.
+- `Event`: one completed instance of an activity on a calendar date.
+
+The important rule is:
+
+```text
+day_score = sum(activity.weight for each event on the date)
 ```
 
-After startup:
+That means the data model keeps raw facts (`Event`) and derives statistics from
+them. This keeps the product flexible: summaries, streaks, and heatmaps are all
+computed views over the same event history.
 
-- Frontend: http://localhost:5173
-- Backend health check: http://localhost:8000/health
-- OpenAPI: http://localhost:8000/docs
-
-SQLite is stored in the `lifetracker_lifetracker-data` Docker volume, so data
-survives container restarts.
-
-## Entity Model
+## Architecture
 
 ```mermaid
 erDiagram
@@ -64,74 +109,13 @@ erDiagram
     }
 ```
 
-## Tables
+The backend is a FastAPI service backed by SQLite and SQLAlchemy. The frontend
+is a React/Vite app focused on a mobile-friendly dashboard. Authentication uses
+Bearer tokens, and database migrations are handled with Alembic.
 
-- `users`: stores local user spaces. Passwords are stored as salted PBKDF2
-  hashes and are used for login.
-- `categories`: stores reusable activity categories. `name` is unique per user.
-- `activities`: stores actions the user can log. Each activity belongs to one
-  user and one category through `category_id`, and contributes `weight` to the
-  daily score.
-- `events`: stores each completed action. Every `POST /events` creates a new
-  row assigned to a user. If no date is provided, the backend uses the current
-  local date.
+## Current Focus
 
-User-scoped API requests use a Bearer access token returned by registration or
-login. The frontend stores the token locally for the current browser session.
-
-The daily score is the sum of `activity.weight` for all events on a calendar
-date. The current streak is the number of consecutive days through today with a
-daily score greater than zero.
-
-## Manual MVP Check
-
-1. Open http://localhost:5173.
-2. Register a user or log in.
-3. Create an activity with a name, category, and weight.
-4. Click the created activity several times.
-5. Check that `total_events`, `total_score`, and today's heatmap cell increase.
-
-Check the API separately:
-
-```shell
-curl http://localhost:8000/health
-TOKEN=$(curl -s -X POST http://localhost:8000/auth/register \
-  -H 'Content-Type: application/json' \
-  -d '{"name":"Demo User","email":"demo@example.com","password":"password"}' \
-  | python -c 'import json,sys; print(json.load(sys.stdin)["access_token"])')
-curl http://localhost:8000/categories -H "Authorization: Bearer $TOKEN"
-curl http://localhost:8000/activities -H "Authorization: Bearer $TOKEN"
-curl http://localhost:8000/stats/summary -H "Authorization: Bearer $TOKEN"
-```
-
-## Local Development
-
-Database migrations run automatically when the backend starts. To run them
-manually:
-
-```shell
-uv run alembic upgrade head
-```
-
-Backend:
-
-```shell
-uv run python -m backend.app
-```
-
-Backend with reload:
-
-```shell
-RELOAD=true uv run python -m backend.app
-```
-
-Frontend:
-
-```shell
-cd frontend
-npm install
-npm run dev
-```
-
-The frontend API URL is controlled by `VITE_API_URL`; the default is
-`http://localhost:8000`.
+LifeTracker is still an MVP. The current version prioritizes the core loop:
+create an activity, log it quickly, and understand the year at a glance. The
+next interesting areas are richer analytics, better mobile polish, and optional
+integrations for importing activity signals from external services.
