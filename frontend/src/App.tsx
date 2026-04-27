@@ -15,11 +15,9 @@ import {
   fetchCategories,
   fetchEvents,
   fetchHeatmap,
-  fetchSummary,
   HeatmapResponse,
   loginUser,
   registerUser,
-  SummaryResponse,
 } from "./api";
 import { ActivityButtons } from "./components/ActivityButtons";
 import { AuthForm, AuthFormInput } from "./components/AuthForm";
@@ -31,7 +29,6 @@ import "./styles.css";
 const currentYear = new Date().getFullYear();
 const authTokenStorageKey = "lifetracker.authToken";
 const userStorageKey = "lifetracker.user";
-type DashboardTab = "year" | "activities";
 
 function getDayOfYear(date: Date): number {
   const start = new Date(date.getFullYear(), 0, 0);
@@ -85,7 +82,6 @@ function App() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedDateEvents, setSelectedDateEvents] = useState<ActivityEvent[]>([]);
-  const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [heatmap, setHeatmap] = useState<HeatmapResponse | null>(null);
   const [isLoading, setIsLoading] = useState(() => Boolean(authToken));
   const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -93,7 +89,7 @@ function App() {
   const [markingActivityId, setMarkingActivityId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<DashboardTab>("year");
+  const [isSelectedDayExpanded, setIsSelectedDayExpanded] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => formatLocalDate(today));
   const currentDate = today.toLocaleDateString("ru-RU", {
     day: "numeric",
@@ -128,17 +124,14 @@ function App() {
   const yearProgress = (daysPassed / totalDays) * 100;
 
   const loadDashboard = useCallback(async (token: string) => {
-    const [nextActivities, nextCategories, nextSummary, nextHeatmap] =
-      await Promise.all([
-        fetchActivities(token),
-        fetchCategories(token),
-        fetchSummary(token, currentYear),
-        fetchHeatmap(token, currentYear),
-      ]);
+    const [nextActivities, nextCategories, nextHeatmap] = await Promise.all([
+      fetchActivities(token),
+      fetchCategories(token),
+      fetchHeatmap(token, currentYear),
+    ]);
 
     setActivities(nextActivities);
     setCategories(nextCategories);
-    setSummary(nextSummary);
     setHeatmap(nextHeatmap);
   }, []);
 
@@ -150,7 +143,6 @@ function App() {
     setActivities([]);
     setCategories([]);
     setSelectedDateEvents([]);
-    setSummary(null);
     setHeatmap(null);
     setMarkingActivityId(null);
     setNotice(null);
@@ -276,6 +268,7 @@ function App() {
 
   function handleSelectHeatmapDate(date: string) {
     setSelectedDate(date);
+    setIsSelectedDayExpanded(true);
   }
 
   async function handleMarkActivity(activity: Activity, date = selectedDate) {
@@ -295,12 +288,8 @@ function App() {
         activity_id: activity.id,
         date,
       });
-      const [nextSummary, nextHeatmap] = await Promise.all([
-        fetchSummary(authToken, currentYear),
-        fetchHeatmap(authToken, currentYear),
-      ]);
+      const nextHeatmap = await fetchHeatmap(authToken, currentYear);
 
-      setSummary(nextSummary);
       setHeatmap(nextHeatmap);
       if (date === selectedDate) {
         setSelectedDateEvents(await fetchEvents(authToken, selectedDate));
@@ -323,15 +312,13 @@ function App() {
             <span style={{ width: `${yearProgress}%` }} />
           </div>
 
-          <div className="header-cards">
-            <article className="mini-card metric-card-wide">
-              <strong>{daysPassed}</strong>
-              <span>дней прошло</span>
-            </article>
-            <article className="mini-card metric-card-wide">
-              <strong className="accent">{daysLeft}</strong>
-              <span>дней осталось</span>
-            </article>
+          <div className="timeline-stats">
+            <span>
+              <strong>{daysPassed}</strong> дней прошло
+            </span>
+            <span>
+              <strong>{daysLeft}</strong> дней осталось
+            </span>
           </div>
         </div>
       </header>
@@ -353,91 +340,91 @@ function App() {
       ) : (
         <div className="dashboard-layout">
           <section className="workspace">
-            <div className="tabs">
-              <button
-                className={`tab ${activeTab === "year" ? "tab-active" : ""}`}
-                onClick={() => setActiveTab("year")}
-                type="button"
-              >
-                Год
-              </button>
-              <button
-                className={`tab ${activeTab === "activities" ? "tab-active" : ""}`}
-                onClick={() => setActiveTab("activities")}
-                type="button"
-              >
-                Активности
-              </button>
-            </div>
+            <div className="year-view">
+              <YearHeatmap
+                heatmap={heatmap}
+                isLoading={isLoading}
+                onSelectDate={handleSelectHeatmapDate}
+                selectedDate={selectedDate}
+              />
 
-            {activeTab === "year" ? (
-              <div className="year-view">
-                <YearHeatmap
-                  heatmap={heatmap}
-                  isLoading={isLoading}
-                  onSelectDate={handleSelectHeatmapDate}
-                  selectedDate={selectedDate}
-                />
+              <section className="panel selected-day-summary collapsible-panel">
+                <button
+                  aria-expanded={isSelectedDayExpanded}
+                  className="collapsible-toggle"
+                  onClick={() =>
+                    setIsSelectedDayExpanded(
+                      (currentIsSelectedDayExpanded) =>
+                        !currentIsSelectedDayExpanded,
+                    )
+                  }
+                  type="button"
+                >
+                  <div>
+                    <h2>Выбранный день</h2>
+                  </div>
+                  <span className="quick-log-toggle-meta">
+                    <span className="pill">
+                      {selectedDayStats?.event_count ?? 0}
+                    </span>
+                    <span className="quick-log-chevron" aria-hidden="true">
+                      {isSelectedDayExpanded ? "↑" : "↓"}
+                    </span>
+                  </span>
+                </button>
 
-                <section className="panel selected-day-summary">
-                  <div className="selected-day-header">
-                    <div>
-                      <p className="eyebrow mono">Выбранный день</p>
-                      <h2>{formatDisplayDate(selectedDate)}</h2>
-                    </div>
+                {!isSelectedDayExpanded ? null : (
+                  <div className="collapsible-content">
+                    <p className="selected-day-date">{formatDisplayDate(selectedDate)}</p>
+
                     <div className="day-metrics">
                       <span>score {selectedDayStats?.score ?? 0}</span>
                       <span>событий {selectedDayStats?.event_count ?? 0}</span>
                     </div>
+
+                    {selectedDateLoggedActivities.length === 0 ? (
+                      <p className="empty-state">
+                        На этот день пока ничего не записано.
+                      </p>
+                    ) : (
+                      <div className="logged-activity-list">
+                        {selectedDateLoggedActivities.map(({ activity, count }) => (
+                          <article className="logged-activity" key={activity.id}>
+                            <div>
+                              <strong>{activity.name}</strong>
+                              <span>{activity.category.name}</span>
+                            </div>
+                            <span className="logged-count">×{count}</span>
+                          </article>
+                        ))}
+                      </div>
+                    )}
                   </div>
+                )}
+              </section>
 
-                  {selectedDateLoggedActivities.length === 0 ? (
-                    <p className="empty-state">
-                      На этот день пока ничего не записано.
-                    </p>
-                  ) : (
-                    <div className="logged-activity-list">
-                      {selectedDateLoggedActivities.map(({ activity, count }) => (
-                        <article className="logged-activity" key={activity.id}>
-                          <div>
-                            <strong>{activity.name}</strong>
-                            <span>{activity.category.name}</span>
-                          </div>
-                          <span className="logged-count">×{count}</span>
-                        </article>
-                      ))}
-                    </div>
-                  )}
-                </section>
+              {notice ? <div className="alert alert-success">{notice}</div> : null}
 
-                {notice ? <div className="alert alert-success">{notice}</div> : null}
+              <ActivityButtons
+                activities={activities}
+                disabled={isLoading}
+                markingActivityId={markingActivityId}
+                onMark={(activity) =>
+                  handleMarkActivity(activity, formatLocalDate(new Date()))
+                }
+                title="Быстрая запись"
+              />
 
-                <ActivityButtons
-                  activities={activities}
-                  disabled={isLoading}
-                  markingActivityId={markingActivityId}
-                  onMark={(activity) =>
-                    handleMarkActivity(activity, formatLocalDate(new Date()))
-                  }
-                  title="Быстрая запись"
-                />
-              </div>
-            ) : null}
-
-            {activeTab === "activities" ? (
-              <div className="work-grid">
-                <ActivityForm
-                  categories={categories}
-                  onCreate={handleCreateActivity}
-                  isSubmitting={isCreating}
-                />
-              </div>
-            ) : null}
+              <ActivityForm
+                categories={categories}
+                onCreate={handleCreateActivity}
+                isSubmitting={isCreating}
+              />
+            </div>
           </section>
 
           <aside className="side-column">
             <div className="card session-card">
-              <p className="eyebrow mono">Space</p>
               <strong>{currentUser.email}</strong>
               <button className="text-button" onClick={handleLogout} type="button">
                 Выйти

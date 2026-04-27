@@ -139,6 +139,27 @@ button:disabled {
   background: linear-gradient(90deg, #e07b39, #f0a060);
 }
 
+.timeline-stats {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  color: #a09a93;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.timeline-stats strong {
+  color: #1a1a1a;
+  font-family: "DM Mono", monospace;
+  font-size: 0.95rem;
+}
+
+.timeline-stats span:last-child strong {
+  color: #e07b39;
+}
+
 .year-progress-labels {
   display: flex;
   justify-content: space-between;
@@ -310,12 +331,14 @@ button:disabled {
   margin-bottom: 16px;
 }
 
-.quick-log-panel {
+.quick-log-panel,
+.collapsible-panel {
   padding: 0;
   overflow: hidden;
 }
 
-.quick-log-toggle {
+.quick-log-toggle,
+.collapsible-toggle {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -328,7 +351,8 @@ button:disabled {
   text-align: left;
 }
 
-.quick-log-toggle h2 {
+.quick-log-toggle h2,
+.collapsible-toggle h2 {
   margin: 0;
   font-size: 1.35rem;
   font-weight: 600;
@@ -353,6 +377,12 @@ button:disabled {
 .quick-log-panel > .category-grid,
 .quick-log-panel > .back-button,
 .quick-log-panel > .activity-grid {
+  margin: 0 16px 16px;
+}
+
+.collapsible-content {
+  display: grid;
+  gap: 12px;
   margin: 0 16px 16px;
 }
 
@@ -541,6 +571,13 @@ button:disabled {
 .selected-day-summary h2 {
   margin: 0;
   font-size: 1.12rem;
+}
+
+.selected-day-date {
+  margin: 0;
+  color: #5a5550;
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .empty-state {
@@ -875,7 +912,7 @@ button:disabled {
   }
 
   .year-header {
-    padding: 16px 14px 12px;
+    padding: 14px 14px 10px;
   }
 
   .header-cards {
@@ -907,7 +944,16 @@ button:disabled {
   }
 
   .year-progress {
-    margin-top: 14px;
+    margin-top: 10px;
+  }
+
+  .timeline-stats {
+    margin-top: 7px;
+    font-size: 0.62rem;
+  }
+
+  .timeline-stats strong {
+    font-size: 0.82rem;
   }
 
   .stats-grid,
@@ -917,7 +963,7 @@ button:disabled {
 
   .dashboard-layout {
     gap: 16px;
-    padding: 16px 12px 28px;
+    padding: 12px 12px 28px;
   }
 
   .tabs {
@@ -940,12 +986,14 @@ button:disabled {
     margin-bottom: 12px;
   }
 
-  .quick-log-toggle {
+  .quick-log-toggle,
+  .collapsible-toggle {
     min-height: 58px;
     padding: 14px;
   }
 
-  .quick-log-toggle h2 {
+  .quick-log-toggle h2,
+  .collapsible-toggle h2 {
     font-size: 1.18rem;
   }
 
@@ -957,24 +1005,39 @@ button:disabled {
     margin-bottom: 14px;
   }
 
+  .collapsible-content {
+    margin-inline: 14px;
+    margin-bottom: 14px;
+  }
+
   .panel h2 {
     font-size: 1.18rem;
   }
 
   .heatmap-panel {
     margin-inline: -4px;
+    padding-inline: 8px;
   }
 
   .heatmap-months {
-    padding-left: 22px;
+    padding-left: 0;
   }
 
   .heatmap-months span {
-    width: 17px;
+    width: 15px;
+    font-size: 0.5rem;
+  }
+
+  .heatmap-body {
+    gap: 0;
+  }
+
+  .heatmap-days {
+    display: none;
   }
 
   .heatmap-days span {
-    height: 15px;
+    height: 10px;
   }
 
   .heatmap-scroll {
@@ -983,10 +1046,15 @@ button:disabled {
     overscroll-behavior-x: contain;
   }
 
+  .heatmap-grid,
+  .heatmap-week {
+    gap: 1px;
+  }
+
   .heatmap-cell {
-    width: 15px;
-    height: 15px;
-    border-radius: 3px;
+    width: 14px;
+    height: 14px;
+    border-radius: 2px;
   }
 
   .heatmap-cell:not(.placeholder):hover {
@@ -1001,15 +1069,6 @@ button:disabled {
   .heatmap-legend {
     flex-wrap: wrap;
     margin-top: 10px;
-  }
-
-  .selected-day-summary {
-    gap: 12px;
-  }
-
-  .selected-day-header {
-    display: grid;
-    gap: 10px;
   }
 
   .back-button,

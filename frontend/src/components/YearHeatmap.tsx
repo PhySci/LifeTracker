@@ -101,7 +101,6 @@ export function YearHeatmap({
       <div className="panel-heading">
         <div>
           <p className="eyebrow mono">Годовая карта</p>
-          <h2>{heatmap?.year ?? new Date().getFullYear()}</h2>
         </div>
         {isLoading ? <span className="pill">Загрузка</span> : null}
       </div>

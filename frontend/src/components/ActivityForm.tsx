@@ -19,6 +19,7 @@ export function ActivityForm({
   isSubmitting,
   onCreate,
 }: ActivityFormProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
   const [weight, setWeight] = useState("1");
@@ -40,60 +41,70 @@ export function ActivityForm({
     setName("");
     setCategory("");
     setWeight("1");
+    setIsExpanded(false);
   }
 
   return (
-    <section className="panel">
-      <div className="panel-heading">
+    <section className="panel collapsible-panel">
+      <button
+        aria-expanded={isExpanded}
+        className="collapsible-toggle"
+        onClick={() => setIsExpanded((currentIsExpanded) => !currentIsExpanded)}
+        type="button"
+      >
         <div>
-          <p className="eyebrow mono">Новая привычка</p>
-          <h2>Создать активность</h2>
+          <h2>Новая привычка</h2>
         </div>
-      </div>
+        <span className="quick-log-chevron" aria-hidden="true">
+          {isExpanded ? "↑" : "↓"}
+        </span>
+      </button>
 
-      <form className="activity-form" onSubmit={handleSubmit}>
-        <label>
-          Категория
-          <input
-            list="category-options"
-            value={category}
-            onChange={(event) => setCategory(event.target.value)}
-            placeholder="sport"
-            required
-          />
-          <datalist id="category-options">
-            {categories.map((categoryOption) => (
-              <option key={categoryOption.id} value={categoryOption.name} />
-            ))}
-          </datalist>
-        </label>
+      {!isExpanded ? null : (
+        <form className="activity-form collapsible-content" onSubmit={handleSubmit}>
+          <label>
+            Категория
+            <input
+              list="category-options"
+              value={category}
+              onChange={(event) => setCategory(event.target.value)}
+              placeholder="sport"
+              required
+            />
+            <datalist id="category-options">
+              {categories.map((categoryOption) => (
+                <option key={categoryOption.id} value={categoryOption.name} />
+              ))}
+            </datalist>
+          </label>
 
-        <label>
-          Название
-          <input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Workout"
-            required
-          />
-        </label>
+          <label>
+            Название
+            <input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="Workout"
+              required
+            />
+          </label>
 
-        <label>
-          Вес
-          <input
-            min="0.1"
-            step="0.1"
-            type="number"
-            value={weight}
-            onChange={(event) => setWeight(event.target.value)}
-            required
-          />
-        </label>
+          <label>
+            Вес
+            <input
+              min="0.1"
+              step="0.1"
+              type="number"
+              value={weight}
+              onChange={(event) => setWeight(event.target.value)}
+              required
+            />
+          </label>
 
-        <button disabled={isSubmitting} type="submit">
-          {isSubmitting ? "Создаю..." : "Добавить"}
-        </button>
-      </form>
+          <button disabled={isSubmitting} type="submit">
+            {isSubmitting ? "Создаю..." : "Создать активность"}
+          </button>
+        </form>
+      )}
     </section>
   );
 }
