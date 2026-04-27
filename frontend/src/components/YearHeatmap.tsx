@@ -3,6 +3,8 @@ import { HeatmapDay, HeatmapResponse } from "../api";
 type YearHeatmapProps = {
   heatmap: HeatmapResponse | null;
   isLoading: boolean;
+  onSelectDate: (date: string) => void;
+  selectedDate: string;
 };
 
 const monthNames = [
@@ -44,6 +46,14 @@ function formatDayTitle(day: HeatmapDay): string {
   return `${day.date}: score ${day.score}, events ${day.event_count}`;
 }
 
+function formatTooltipDate(date: string): string {
+  return new Date(`${date}T00:00:00`).toLocaleDateString("ru-RU", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
 function isToday(date: string): boolean {
   const today = new Date();
   const year = today.getFullYear();
@@ -53,7 +63,12 @@ function isToday(date: string): boolean {
   return date === `${year}-${month}-${day}`;
 }
 
-export function YearHeatmap({ heatmap, isLoading }: YearHeatmapProps) {
+export function YearHeatmap({
+  heatmap,
+  isLoading,
+  onSelectDate,
+  selectedDate,
+}: YearHeatmapProps) {
   const days = heatmap?.days ?? [];
   const maxScore = days.reduce((max, day) => Math.max(max, day.score), 0);
   const firstDay = days[0] ? new Date(`${days[0].date}T00:00:00`) : null;
@@ -122,12 +137,21 @@ export function YearHeatmap({ heatmap, isLoading }: YearHeatmapProps) {
                   <div className="heatmap-week" key={weekIndex}>
                     {week.map((day, dayIndex) =>
                       day ? (
-                        <span
+                        <button
                           aria-label={formatDayTitle(day)}
-                          className={`heatmap-cell${isToday(day.date) ? " today" : ""}`}
+                          className={[
+                            "heatmap-cell",
+                            isToday(day.date) ? "today" : "",
+                            selectedDate === day.date ? "selected" : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
                           data-level={getIntensity(day, maxScore)}
+                          data-tooltip={formatTooltipDate(day.date)}
                           key={day.date}
+                          onClick={() => onSelectDate(day.date)}
                           title={formatDayTitle(day)}
+                          type="button"
                         />
                       ) : (
                         <span

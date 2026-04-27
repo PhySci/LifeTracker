@@ -16,4 +16,4 @@
 
 # Next steps (not MVP)
 1. Connect to GitHub and take commits into account.
-2. 
+2. MCP server.

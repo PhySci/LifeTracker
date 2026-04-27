@@ -53,6 +53,13 @@ export type EventCreate = {
   date?: string;
 };
 
+export type ActivityEvent = {
+  id: number;
+  user_id: number;
+  activity_id: number;
+  date: string;
+};
+
 export type HeatmapDay = {
   date: string;
   score: number;
@@ -72,6 +79,33 @@ export type SummaryResponse = {
   current_streak: number;
 };
 
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+function getErrorMessage(text: string, fallback: string): string {
+  if (!text) {
+    return fallback;
+  }
+
+  try {
+    const payload = JSON.parse(text) as { detail?: unknown };
+    if (typeof payload.detail === "string") {
+      return payload.detail;
+    }
+  } catch {
+    return text;
+  }
+
+  return text;
+}
+
 async function request<T>(
   path: string,
   init?: RequestInit,
@@ -88,7 +122,10 @@ async function request<T>(
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(text || `API request failed with ${response.status}`);
+    throw new ApiError(
+      getErrorMessage(text, `API request failed with ${response.status}`),
+      response.status,
+    );
   }
 
   return response.json() as Promise<T>;
@@ -152,6 +189,14 @@ export function createEvent(token: string, input: EventCreate): Promise<void> {
     method: "POST",
     body: JSON.stringify(input),
   }, token);
+}
+
+export function fetchEvents(token: string, date: string): Promise<ActivityEvent[]> {
+  return request<ActivityEvent[]>(
+    `/events?date=${encodeURIComponent(date)}`,
+    undefined,
+    token,
+  );
 }
 
 export function fetchHeatmap(

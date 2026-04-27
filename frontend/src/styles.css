@@ -48,14 +48,6 @@ button:disabled {
   background: #ffffff;
 }
 
-.year-header-top {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 20px;
-  flex-wrap: wrap;
-}
-
 .eyebrow {
   margin: 0 0 7px;
   color: #a09a93;
@@ -65,30 +57,11 @@ button:disabled {
   text-transform: uppercase;
 }
 
-.days-left {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-}
-
-.days-left span {
-  color: #e07b39;
-  font-family: "DM Mono", monospace;
-  font-size: clamp(3.1rem, 12vw, 4rem);
-  font-weight: 600;
-  line-height: 0.9;
-}
-
-.days-left small {
-  color: #c8a08a;
-  font-size: 1.25rem;
-  font-weight: 300;
-}
-
-.header-stats {
+.header-cards {
   display: grid;
-  grid-template-columns: repeat(3, minmax(86px, 1fr));
+  grid-template-columns: repeat(5, minmax(96px, 1fr));
   gap: 12px;
+  margin-top: 12px;
 }
 
 .card,
@@ -133,6 +106,24 @@ button:disabled {
   text-transform: uppercase;
 }
 
+.metric-card-wide {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: left;
+}
+
+.metric-card-wide strong {
+  font-size: clamp(2.4rem, 7vw, 3.8rem);
+}
+
+.metric-card-wide span {
+  max-width: 72px;
+  margin-top: 0;
+  line-height: 1.2;
+}
+
 .year-progress {
   height: 4px;
   margin-top: 20px;
@@ -171,7 +162,88 @@ button:disabled {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
   gap: 16px;
-  margin-top: 16px;
+}
+
+.day-view {
+  display: grid;
+  gap: 16px;
+  max-width: 760px;
+}
+
+.day-details-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(280px, 1.2fr);
+  gap: 18px;
+}
+
+.day-panel,
+.logged-activities-panel {
+  min-width: 0;
+}
+
+.day-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 16px;
+}
+
+.day-panel h2 {
+  margin: 0;
+}
+
+.day-metrics {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.day-metrics span {
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: #f8f5f2;
+  color: #8a8480;
+  font-family: "DM Mono", monospace;
+  font-size: 0.72rem;
+}
+
+.logged-activity-list {
+  display: grid;
+  gap: 8px;
+}
+
+.logged-activity {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #e8e3de;
+  border-radius: 8px;
+  padding: 11px 14px;
+  background: #f0faf6;
+}
+
+.logged-activity div {
+  display: grid;
+  gap: 3px;
+}
+
+.logged-activity strong {
+  color: #1a6b52;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.logged-activity span {
+  color: #8a8480;
+  font-size: 0.75rem;
+}
+
+.logged-count {
+  color: #2e9e7a;
+  font-family: "DM Mono", monospace;
+  font-size: 1rem;
+  font-weight: 600;
 }
 
 .side-column {
@@ -437,7 +509,7 @@ button:disabled {
 
 .heatmap-scroll {
   overflow-x: auto;
-  padding-bottom: 6px;
+  padding-bottom: 34px;
 }
 
 .heatmap-grid {
@@ -457,6 +529,8 @@ button:disabled {
   width: 13px;
   height: 13px;
   flex-shrink: 0;
+  border: 0;
+  padding: 0;
   border-radius: 2px;
   background: #e8f0ed;
   transition: transform 0.12s ease;
@@ -464,8 +538,39 @@ button:disabled {
 
 .heatmap-cell:not(.placeholder):hover {
   position: relative;
-  z-index: 1;
+  z-index: 3;
   transform: scale(1.5);
+}
+
+.heatmap-cell[data-tooltip]::after {
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 50%;
+  z-index: 4;
+  width: max-content;
+  max-width: 180px;
+  border: 1px solid #e8e3de;
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: #ffffff;
+  box-shadow: 0 6px 18px rgba(26, 26, 26, 0.12);
+  color: #5a5550;
+  content: attr(data-tooltip);
+  font-family: "DM Sans", "Helvetica Neue", Arial, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -4px) scale(0.82);
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease;
+}
+
+.heatmap-cell[data-tooltip]:hover::after,
+.heatmap-cell[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(0.82);
 }
 
 .heatmap-cell.placeholder {
@@ -491,6 +596,11 @@ button:disabled {
 .heatmap-cell.today {
   background: #e07b39;
   animation: glow 2s infinite;
+}
+
+.heatmap-cell.selected:not(.today) {
+  outline: 2px solid #e07b39;
+  outline-offset: 1.5px;
 }
 
 @keyframes glow {
@@ -643,6 +753,10 @@ button:disabled {
   .work-grid {
     grid-template-columns: 1fr;
   }
+
+  .day-details-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {
@@ -650,7 +764,7 @@ button:disabled {
     padding-top: 20px;
   }
 
-  .header-stats,
+  .header-cards,
   .stats-grid,
   .side-column {
     grid-template-columns: 1fr;

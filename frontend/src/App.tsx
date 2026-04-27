@@ -2,7 +2,10 @@ import { StrictMode, useCallback, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 
 import {
+
+  ApiError,
   Activity,
+  ActivityEvent,
   Category,
   User,
   createActivity,
@@ -10,6 +13,7 @@ import {
   createEvent,
   fetchActivities,
   fetchCategories,
+  fetchEvents,
   fetchHeatmap,
   fetchSummary,
   HeatmapResponse,
@@ -20,13 +24,13 @@ import {
 import { ActivityButtons } from "./components/ActivityButtons";
 import { AuthForm, AuthFormInput } from "./components/AuthForm";
 import { ActivityForm, ActivityFormInput } from "./components/ActivityForm";
-import { StatsSummary } from "./components/StatsSummary";
 import { YearHeatmap } from "./components/YearHeatmap";
 import "./styles.css";
 
 const currentYear = new Date().getFullYear();
 const authTokenStorageKey = "lifetracker.authToken";
 const userStorageKey = "lifetracker.user";
+type DashboardTab = "year" | "day" | "activities";
 
 function getDayOfYear(date: Date): number {
   const start = new Date(date.getFullYear(), 0, 0);
@@ -35,6 +39,22 @@ function getDayOfYear(date: Date): number {
 
 function getDaysInYear(year: number): number {
   return new Date(year, 1, 29).getMonth() === 1 ? 366 : 365;
+}
+
+function formatLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function formatDisplayDate(date: string): string {
+  return new Date(`${date}T00:00:00`).toLocaleDateString("ru-RU", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 }
 
 function readStoredUser(): User | null {
@@ -63,6 +83,7 @@ function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(() => readStoredUser());
   const [activities, setActivities] = useState<Activity[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedDateEvents, setSelectedDateEvents] = useState<ActivityEvent[]>([]);
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [heatmap, setHeatmap] = useState<HeatmapResponse | null>(null);
   const [isLoading, setIsLoading] = useState(() => Boolean(authToken));
@@ -71,14 +92,38 @@ function App() {
   const [markingActivityId, setMarkingActivityId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const completionRate =
-    daysPassed > 0 && summary
-      ? Math.round((summary.active_days / daysPassed) * 100)
-      : 0;
-  const todayFormatted = today.toLocaleDateString("ru-RU", {
+  const [activeTab, setActiveTab] = useState<DashboardTab>("year");
+  const [selectedDate, setSelectedDate] = useState(() => formatLocalDate(today));
+  const currentDate = today.toLocaleDateString("ru-RU", {
     day: "numeric",
     month: "long",
+    year: "numeric",
   });
+  const currentWeekday = today.toLocaleDateString("ru-RU", {
+    weekday: "long",
+  });
+  const currentDateLabel = `${currentDate}, ${
+    currentWeekday.charAt(0).toUpperCase() + currentWeekday.slice(1)
+  }`;
+  const selectedDayStats = heatmap?.days.find((day) => day.date === selectedDate);
+  const selectedDateActivityCounts = selectedDateEvents.reduce(
+    (counts, event) => {
+      counts.set(event.activity_id, (counts.get(event.activity_id) ?? 0) + 1);
+      return counts;
+    },
+    new Map<number, number>(),
+  );
+  const selectedDateLoggedActivities = Array.from(
+    selectedDateActivityCounts.entries(),
+  )
+    .map(([activityId, count]) => ({
+      activity: activities.find((activity) => activity.id === activityId),
+      count,
+    }))
+    .filter(
+      (entry): entry is { activity: Activity; count: number } =>
+        entry.activity !== undefined,
+    );
   const yearProgress = (daysPassed / totalDays) * 100;
 
   const loadDashboard = useCallback(async (token: string) => {
@@ -96,6 +141,32 @@ function App() {
     setHeatmap(nextHeatmap);
   }, []);
 
+  function clearSession(message?: string) {
+    localStorage.removeItem(authTokenStorageKey);
+    localStorage.removeItem(userStorageKey);
+    setAuthToken(null);
+    setCurrentUser(null);
+    setActivities([]);
+    setCategories([]);
+    setSelectedDateEvents([]);
+    setSummary(null);
+    setHeatmap(null);
+    setMarkingActivityId(null);
+    setNotice(null);
+    setError(message ?? null);
+  }
+
+  function handleRequestError(unknownError: unknown, fallbackMessage: string) {
+    if (unknownError instanceof ApiError && unknownError.status === 401) {
+      clearSession("Your session is no longer valid. Please sign in again.");
+      return;
+    }
+
+    setError(
+      unknownError instanceof Error ? unknownError.message : fallbackMessage,
+    );
+  }
+
   useEffect(() => {
     if (!authToken) {
       setIsLoading(false);
@@ -105,14 +176,23 @@ function App() {
     setIsLoading(true);
     loadDashboard(authToken)
       .catch((unknownError: unknown) => {
-        setError(
-          unknownError instanceof Error
-            ? unknownError.message
-            : "Could not load data.",
-        );
+        handleRequestError(unknownError, "Could not load data.");
       })
       .finally(() => setIsLoading(false));
   }, [authToken, loadDashboard]);
+
+  useEffect(() => {
+    if (!authToken || !currentUser) {
+      setSelectedDateEvents([]);
+      return;
+    }
+
+    fetchEvents(authToken, selectedDate)
+      .then(setSelectedDateEvents)
+      .catch((unknownError: unknown) => {
+        handleRequestError(unknownError, "Could not load events for the selected day.");
+      });
+  }, [authToken, currentUser, selectedDate]);
 
   async function handleAuth(input: AuthFormInput) {
     setIsAuthenticating(true);
@@ -136,26 +216,14 @@ function App() {
       await loadDashboard(session.access_token);
       setNotice(`Signed in as ${session.user.email}.`);
     } catch (unknownError) {
-      setError(
-        unknownError instanceof Error
-          ? unknownError.message
-          : "Could not authenticate.",
-      );
+      handleRequestError(unknownError, "Could not authenticate.");
     } finally {
       setIsAuthenticating(false);
     }
   }
 
   function handleLogout() {
-    localStorage.removeItem(authTokenStorageKey);
-    localStorage.removeItem(userStorageKey);
-    setAuthToken(null);
-    setCurrentUser(null);
-    setActivities([]);
-    setCategories([]);
-    setSummary(null);
-    setHeatmap(null);
-    setNotice(null);
+    clearSession();
   }
 
   async function handleCreateActivity(input: ActivityFormInput) {
@@ -190,17 +258,18 @@ function App() {
       setActivities((currentActivities) => [...currentActivities, activity]);
       setNotice(`Activity "${activity.name}" was created.`);
     } catch (unknownError) {
-      setError(
-        unknownError instanceof Error
-          ? unknownError.message
-          : "Could not create the activity.",
-      );
+      handleRequestError(unknownError, "Could not create the activity.");
     } finally {
       setIsCreating(false);
     }
   }
 
-  async function handleMarkActivity(activity: Activity) {
+  function handleSelectHeatmapDate(date: string) {
+    setSelectedDate(date);
+    setActiveTab("day");
+  }
+
+  async function handleMarkActivity(activity: Activity, date = selectedDate) {
     setMarkingActivityId(activity.id);
     setError(null);
     setNotice(null);
@@ -215,6 +284,7 @@ function App() {
 
       await createEvent(authToken, {
         activity_id: activity.id,
+        date,
       });
       const [nextSummary, nextHeatmap] = await Promise.all([
         fetchSummary(authToken, currentYear),
@@ -223,13 +293,12 @@ function App() {
 
       setSummary(nextSummary);
       setHeatmap(nextHeatmap);
-      setNotice(`Logged: ${activity.name}.`);
+      if (date === selectedDate) {
+        setSelectedDateEvents(await fetchEvents(authToken, selectedDate));
+      }
+      setNotice(`Отмечено: ${activity.name} · ${formatDisplayDate(date)}.`);
     } catch (unknownError) {
-      setError(
-        unknownError instanceof Error
-          ? unknownError.message
-          : "Could not log the activity.",
-      );
+      handleRequestError(unknownError, "Could not log the activity.");
     } finally {
       setMarkingActivityId(null);
     }
@@ -238,27 +307,34 @@ function App() {
   return (
     <main className="app-shell">
       <header className="year-header">
-        <div className="year-header-top">
-          <div>
-            <p className="eyebrow mono">{currentYear} — осталось</p>
-            <div className="days-left">
-              <span>{daysLeft}</span>
-              <small>дней</small>
-            </div>
-          </div>
+        <div className="year-header-content">
+          <p className="eyebrow mono">
+            {currentYear} · {currentDateLabel}
+          </p>
 
-          <div className="header-stats">
-            <article className="mini-card">
+          <div className="header-cards">
+            <article className="mini-card metric-card-wide">
+              <strong>{daysPassed}</strong>
+              <span>дней прошло</span>
+            </article>
+            <article className="mini-card metric-card-wide">
+              <strong className="accent">{daysLeft}</strong>
+              <span>дней осталось</span>
+            </article>
+            <article className="mini-card metric-card-wide">
               <strong>{summary?.active_days ?? 0}</strong>
               <span>активных дней</span>
             </article>
             <article className="mini-card">
-              <strong>{daysPassed}</strong>
-              <span>прошло</span>
+              <strong className="good">{summary?.current_streak ?? 0}</strong>
+              <span>streak дней</span>
             </article>
             <article className="mini-card">
-              <strong className={completionRate >= 60 ? "good" : "accent"}>
-                {completionRate}%
+              <strong>
+                {daysPassed > 0 && summary
+                  ? Math.round((summary.active_days / daysPassed) * 100)
+                  : 0}
+                %
               </strong>
               <span>эффективность</span>
             </article>
@@ -294,73 +370,111 @@ function App() {
         <div className="dashboard-layout">
           <section className="workspace">
             <div className="tabs">
-              <button className="tab tab-active" type="button">
+              <button
+                className={`tab ${activeTab === "year" ? "tab-active" : ""}`}
+                onClick={() => setActiveTab("year")}
+                type="button"
+              >
                 Год
               </button>
-              <button className="tab" type="button">
+              <button
+                className={`tab ${activeTab === "day" ? "tab-active" : ""}`}
+                onClick={() => setActiveTab("day")}
+                type="button"
+              >
                 День
               </button>
-              <button className="tab" type="button">
+              <button
+                className={`tab ${activeTab === "activities" ? "tab-active" : ""}`}
+                onClick={() => setActiveTab("activities")}
+                type="button"
+              >
                 Активности
               </button>
             </div>
 
-            <YearHeatmap heatmap={heatmap} isLoading={isLoading} />
-
-            <div className="work-grid">
-              <ActivityButtons
-                activities={activities}
-                disabled={isLoading}
-                markingActivityId={markingActivityId}
-                onMark={handleMarkActivity}
+            {activeTab === "year" ? (
+              <YearHeatmap
+                heatmap={heatmap}
+                isLoading={isLoading}
+                onSelectDate={handleSelectHeatmapDate}
+                selectedDate={selectedDate}
               />
+            ) : null}
 
-              <ActivityForm
-                categories={categories}
-                onCreate={handleCreateActivity}
-                isSubmitting={isCreating}
-              />
-            </div>
+            {activeTab === "day" ? (
+              <div className="day-view">
+                <section className="panel day-details-panel">
+                  <div className="day-details-grid">
+                    <div className="day-panel">
+                      <div>
+                        <p className="eyebrow mono">Выбранный день</p>
+                        <h2>{formatDisplayDate(selectedDate)}</h2>
+                      </div>
+                      <div className="day-metrics">
+                        <span>score {selectedDayStats?.score ?? 0}</span>
+                        <span>событий {selectedDayStats?.event_count ?? 0}</span>
+                      </div>
+                    </div>
 
-            <StatsSummary isLoading={isLoading} summary={summary} />
+                    <div className="logged-activities-panel">
+                      <div className="panel-heading">
+                        <div>
+                          <p className="eyebrow mono">Записано</p>
+                          <h2>Активности дня</h2>
+                        </div>
+                        <span className="pill">{selectedDateEvents.length}</span>
+                      </div>
+
+                      {selectedDateLoggedActivities.length === 0 ? (
+                        <p className="empty-state">
+                          На этот день пока ничего не записано.
+                        </p>
+                      ) : (
+                        <div className="logged-activity-list">
+                          {selectedDateLoggedActivities.map(({ activity, count }) => (
+                            <article className="logged-activity" key={activity.id}>
+                              <div>
+                                <strong>{activity.name}</strong>
+                                <span>{activity.category.name}</span>
+                              </div>
+                              <span className="logged-count">×{count}</span>
+                            </article>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </section>
+
+                <ActivityButtons
+                  activities={activities}
+                  disabled={isLoading}
+                  markingActivityId={markingActivityId}
+                  onMark={(activity) => handleMarkActivity(activity, selectedDate)}
+                />
+              </div>
+            ) : null}
+
+            {activeTab === "activities" ? (
+              <div className="work-grid">
+                <ActivityForm
+                  categories={categories}
+                  onCreate={handleCreateActivity}
+                  isSubmitting={isCreating}
+                />
+
+                <ActivityButtons
+                  activities={activities}
+                  disabled={isLoading}
+                  markingActivityId={markingActivityId}
+                  onMark={(activity) => handleMarkActivity(activity, formatLocalDate(new Date()))}
+                />
+              </div>
+            ) : null}
           </section>
 
           <aside className="side-column">
-            <div className="card">
-              <p className="eyebrow mono">Сегодня</p>
-              <h3>{todayFormatted}</h3>
-              <p>День {todayDayOfYear} из {totalDays}</p>
-              <div className="today-score">
-                <strong>{summary?.current_streak ?? 0}</strong>
-                <span>streak дней</span>
-              </div>
-            </div>
-
-            <div className="card compact-list">
-              <p className="eyebrow mono">Осталось</p>
-              <div>
-                <span>дней</span>
-                <strong>{daysLeft}</strong>
-              </div>
-              <div>
-                <span>недель</span>
-                <strong>{Math.floor(daysLeft / 7)}</strong>
-              </div>
-              <div>
-                <span>выходных</span>
-                <strong>{Math.floor(daysLeft / 7) * 2}</strong>
-              </div>
-            </div>
-
-            <div className="card">
-              <p className="eyebrow mono">Прогноз</p>
-              <p className="forecast-copy">
-                При темпе {completionRate}%:
-                <strong>~{Math.round((daysLeft * completionRate) / 100)}</strong>
-                активных дней до конца года
-              </p>
-            </div>
-
             <div className="card session-card">
               <p className="eyebrow mono">Space</p>
               <strong>{currentUser.email}</strong>
