@@ -31,7 +31,7 @@ import "./styles.css";
 const currentYear = new Date().getFullYear();
 const authTokenStorageKey = "lifetracker.authToken";
 const userStorageKey = "lifetracker.user";
-type DashboardTab = "year" | "day" | "activities";
+type DashboardTab = "year" | "activities";
 
 function getDayOfYear(date: Date): number {
   const start = new Date(date.getFullYear(), 0, 0);
@@ -195,6 +195,15 @@ function App() {
       });
   }, [authToken, currentUser, selectedDate]);
 
+  useEffect(() => {
+    if (!notice) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => setNotice(null), 2500);
+    return () => window.clearTimeout(timeoutId);
+  }, [notice]);
+
   async function handleAuth(input: AuthFormInput) {
     setIsAuthenticating(true);
     setError(null);
@@ -328,7 +337,6 @@ function App() {
       </header>
 
       {error ? <div className="alert alert-error">{error}</div> : null}
-      {notice ? <div className="alert alert-success">{notice}</div> : null}
 
       {!currentUser || !authToken ? (
         <section className="auth-layout">
@@ -354,13 +362,6 @@ function App() {
                 Год
               </button>
               <button
-                className={`tab ${activeTab === "day" ? "tab-active" : ""}`}
-                onClick={() => setActiveTab("day")}
-                type="button"
-              >
-                День
-              </button>
-              <button
                 className={`tab ${activeTab === "activities" ? "tab-active" : ""}`}
                 onClick={() => setActiveTab("activities")}
                 type="button"
@@ -379,22 +380,37 @@ function App() {
                 />
 
                 <section className="panel selected-day-summary">
-                  <div>
-                    <p className="eyebrow mono">Выбранный день</p>
-                    <h2>{formatDisplayDate(selectedDate)}</h2>
+                  <div className="selected-day-header">
+                    <div>
+                      <p className="eyebrow mono">Выбранный день</p>
+                      <h2>{formatDisplayDate(selectedDate)}</h2>
+                    </div>
+                    <div className="day-metrics">
+                      <span>score {selectedDayStats?.score ?? 0}</span>
+                      <span>событий {selectedDayStats?.event_count ?? 0}</span>
+                    </div>
                   </div>
-                  <div className="day-metrics">
-                    <span>score {selectedDayStats?.score ?? 0}</span>
-                    <span>событий {selectedDayStats?.event_count ?? 0}</span>
-                  </div>
-                  <button
-                    className="text-button"
-                    onClick={() => setActiveTab("day")}
-                    type="button"
-                  >
-                    Открыть детали дня
-                  </button>
+
+                  {selectedDateLoggedActivities.length === 0 ? (
+                    <p className="empty-state">
+                      На этот день пока ничего не записано.
+                    </p>
+                  ) : (
+                    <div className="logged-activity-list">
+                      {selectedDateLoggedActivities.map(({ activity, count }) => (
+                        <article className="logged-activity" key={activity.id}>
+                          <div>
+                            <strong>{activity.name}</strong>
+                            <span>{activity.category.name}</span>
+                          </div>
+                          <span className="logged-count">×{count}</span>
+                        </article>
+                      ))}
+                    </div>
+                  )}
                 </section>
+
+                {notice ? <div className="alert alert-success">{notice}</div> : null}
 
                 <ActivityButtons
                   activities={activities}
@@ -403,61 +419,7 @@ function App() {
                   onMark={(activity) =>
                     handleMarkActivity(activity, formatLocalDate(new Date()))
                   }
-                  title="Записать сегодня"
-                />
-              </div>
-            ) : null}
-
-            {activeTab === "day" ? (
-              <div className="day-view">
-                <section className="panel day-details-panel">
-                  <div className="day-details-grid">
-                    <div className="day-panel">
-                      <div>
-                        <p className="eyebrow mono">Выбранный день</p>
-                        <h2>{formatDisplayDate(selectedDate)}</h2>
-                      </div>
-                      <div className="day-metrics">
-                        <span>score {selectedDayStats?.score ?? 0}</span>
-                        <span>событий {selectedDayStats?.event_count ?? 0}</span>
-                      </div>
-                    </div>
-
-                    <div className="logged-activities-panel">
-                      <div className="panel-heading">
-                        <div>
-                          <p className="eyebrow mono">Записано</p>
-                          <h2>Активности дня</h2>
-                        </div>
-                        <span className="pill">{selectedDateEvents.length}</span>
-                      </div>
-
-                      {selectedDateLoggedActivities.length === 0 ? (
-                        <p className="empty-state">
-                          На этот день пока ничего не записано.
-                        </p>
-                      ) : (
-                        <div className="logged-activity-list">
-                          {selectedDateLoggedActivities.map(({ activity, count }) => (
-                            <article className="logged-activity" key={activity.id}>
-                              <div>
-                                <strong>{activity.name}</strong>
-                                <span>{activity.category.name}</span>
-                              </div>
-                              <span className="logged-count">×{count}</span>
-                            </article>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </section>
-
-                <ActivityButtons
-                  activities={activities}
-                  disabled={isLoading}
-                  markingActivityId={markingActivityId}
-                  onMark={(activity) => handleMarkActivity(activity, selectedDate)}
+                  title="Быстрая запись"
                 />
               </div>
             ) : null}
@@ -468,13 +430,6 @@ function App() {
                   categories={categories}
                   onCreate={handleCreateActivity}
                   isSubmitting={isCreating}
-                />
-
-                <ActivityButtons
-                  activities={activities}
-                  disabled={isLoading}
-                  markingActivityId={markingActivityId}
-                  onMark={(activity) => handleMarkActivity(activity, formatLocalDate(new Date()))}
                 />
               </div>
             ) : null}

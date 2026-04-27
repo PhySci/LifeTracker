@@ -17,6 +17,7 @@ export function ActivityButtons({
   onMark,
   title = "Активности",
 }: ActivityButtonsProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const categories = useMemo(() => {
     const categoryById = new Map<number, Activity["category"]>();
@@ -36,16 +37,25 @@ export function ActivityButtons({
     : [];
 
   return (
-    <section className="panel">
-      <div className="panel-heading">
+    <section className="panel quick-log-panel">
+      <button
+        aria-expanded={isExpanded}
+        className="quick-log-toggle"
+        onClick={() => setIsExpanded((currentIsExpanded) => !currentIsExpanded)}
+        type="button"
+      >
         <div>
-          <p className="eyebrow mono">Быстрая запись</p>
           <h2>{selectedCategory ? selectedCategory.name : title}</h2>
         </div>
-        <span className="pill">{activities.length}</span>
-      </div>
+        <span className="quick-log-toggle-meta">
+          <span className="pill">{activities.length}</span>
+          <span className="quick-log-chevron" aria-hidden="true">
+            {isExpanded ? "↑" : "↓"}
+          </span>
+        </span>
+      </button>
 
-      {activities.length === 0 ? (
+      {!isExpanded ? null : activities.length === 0 ? (
         <p className="empty-state">
           Пока нет активностей. Создайте первую, затем нажимайте на неё каждый
           раз, когда действие выполнено.

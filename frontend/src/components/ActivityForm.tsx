@@ -53,16 +53,6 @@ export function ActivityForm({
 
       <form className="activity-form" onSubmit={handleSubmit}>
         <label>
-          Название
-          <input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Workout"
-            required
-          />
-        </label>
-
-        <label>
           Категория
           <input
             list="category-options"
@@ -76,6 +66,16 @@ export function ActivityForm({
               <option key={categoryOption.id} value={categoryOption.name} />
             ))}
           </datalist>
+        </label>
+
+        <label>
+          Название
+          <input
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="Workout"
+            required
+          />
         </label>
 
         <label>

@@ -310,6 +310,52 @@ button:disabled {
   margin-bottom: 16px;
 }
 
+.quick-log-panel {
+  padding: 0;
+  overflow: hidden;
+}
+
+.quick-log-toggle {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  border: 0;
+  padding: 16px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.quick-log-toggle h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.quick-log-toggle-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.quick-log-chevron {
+  color: #e07b39;
+  font-family: "DM Mono", monospace;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.quick-log-panel > .empty-state,
+.quick-log-panel > .category-grid,
+.quick-log-panel > .back-button,
+.quick-log-panel > .activity-grid {
+  margin: 0 16px 16px;
+}
+
 .panel h2,
 .auth-layout h1,
 .card h3 {
@@ -482,8 +528,13 @@ button:disabled {
 
 .selected-day-summary {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  align-items: center;
+  gap: 14px;
+}
+
+.selected-day-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 12px;
 }
 
@@ -889,6 +940,23 @@ button:disabled {
     margin-bottom: 12px;
   }
 
+  .quick-log-toggle {
+    min-height: 58px;
+    padding: 14px;
+  }
+
+  .quick-log-toggle h2 {
+    font-size: 1.18rem;
+  }
+
+  .quick-log-panel > .empty-state,
+  .quick-log-panel > .category-grid,
+  .quick-log-panel > .back-button,
+  .quick-log-panel > .activity-grid {
+    margin-inline: 14px;
+    margin-bottom: 14px;
+  }
+
   .panel h2 {
     font-size: 1.18rem;
   }
@@ -936,11 +1004,14 @@ button:disabled {
   }
 
   .selected-day-summary {
-    grid-template-columns: 1fr;
-    align-items: stretch;
+    gap: 12px;
   }
 
-  .selected-day-summary .text-button,
+  .selected-day-header {
+    display: grid;
+    gap: 10px;
+  }
+
   .back-button,
   .text-button {
     min-height: 38px;
