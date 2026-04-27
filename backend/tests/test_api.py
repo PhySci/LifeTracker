@@ -139,6 +139,37 @@ def test_register_returns_token_and_public_user(client: TestClient) -> None:
     }
 
 
+def test_registration_can_be_disabled(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("ALLOW_REGISTRATION", "false")
+
+    response = client.post(
+        "/auth/register",
+        json={"name": "Demo User", "email": "demo@example.com", "password": "password"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Registration is disabled"
+
+
+def test_public_user_endpoints_are_disabled_in_production(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("ENVIRONMENT", "production")
+
+    list_response = client.get("/users")
+    create_response = client.post(
+        "/users",
+        json={"name": "Demo User", "email": "demo@example.com", "password": "password"},
+    )
+
+    assert list_response.status_code == 404
+    assert create_response.status_code == 404
+
+
 def test_login_returns_token_for_valid_credentials(client: TestClient) -> None:
     create_user(client)
 

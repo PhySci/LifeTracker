@@ -12,7 +12,18 @@ import secrets
 PASSWORD_SCHEME = "pbkdf2_sha256"
 PASSWORD_ITERATIONS = 260_000
 TOKEN_TTL_SECONDS = 60 * 60 * 24 * 30
-SECRET_KEY = os.getenv("SECRET_KEY", "lifetracker-local-dev-secret")
+
+
+def _get_secret_key() -> str:
+    secret_key = os.getenv("SECRET_KEY")
+    if secret_key:
+        return secret_key
+    if os.getenv("ENVIRONMENT") == "production":
+        raise RuntimeError("SECRET_KEY must be set in production")
+    return "lifetracker-local-dev-secret"
+
+
+SECRET_KEY = _get_secret_key()
 
 
 def hash_password(password: str) -> str:

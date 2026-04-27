@@ -117,6 +117,15 @@ The backend is a FastAPI service backed by SQLite and SQLAlchemy. The frontend
 is a React/Vite app focused on a mobile-friendly dashboard. Authentication uses
 Bearer tokens, and database migrations are handled with Alembic.
 
+## Deployment
+
+The current production target is Fly.io. The app is deployed as one Fly app:
+nginx serves the built frontend, proxies `/api` to FastAPI, and SQLite is kept
+on a persistent Fly Volume.
+
+See [`docs/deployment-fly.md`](docs/deployment-fly.md) for the deployment,
+update, and backup steps.
+
 ## Current Focus
 
 LifeTracker is still an MVP. The current version prioritizes the core loop:

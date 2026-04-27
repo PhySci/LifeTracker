@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 import logging
+import os
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -16,6 +17,24 @@ router = APIRouter()
 DbSession = Annotated[Session, Depends(get_db)]
 logger = logging.getLogger(__name__)
 bearer_scheme = HTTPBearer(auto_error=False)
+
+
+def _env_flag(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.lower() in {"1", "true", "yes", "on"}
+
+
+def _public_user_endpoints_allowed() -> bool:
+    return _env_flag(
+        "ALLOW_PUBLIC_USER_ENDPOINTS",
+        default=os.getenv("ENVIRONMENT") != "production",
+    )
+
+
+def _registration_allowed() -> bool:
+    return _env_flag("ALLOW_REGISTRATION", default=True)
 
 
 def _year_bounds(year: int) -> tuple[date, date]:
@@ -109,15 +128,15 @@ def calculate_current_streak(
 
 @router.get("/users", response_model=list[schemas.UserRead])
 def list_users(db: DbSession) -> list[models.User]:
+    if not _public_user_endpoints_allowed():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Not found",
+        )
     return list(db.scalars(select(models.User).order_by(models.User.id)).all())
 
 
-@router.post(
-    "/users",
-    response_model=schemas.UserRead,
-    status_code=status.HTTP_201_CREATED,
-)
-def create_user(user_in: schemas.UserCreate, db: DbSession) -> models.User:
+def _create_user(user_in: schemas.UserCreate, db: Session) -> models.User:
     user = models.User(
         name=user_in.name,
         email=user_in.email,
@@ -140,12 +159,31 @@ def create_user(user_in: schemas.UserCreate, db: DbSession) -> models.User:
 
 
 @router.post(
+    "/users",
+    response_model=schemas.UserRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_user(user_in: schemas.UserCreate, db: DbSession) -> models.User:
+    if not _public_user_endpoints_allowed():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Not found",
+        )
+    return _create_user(user_in, db)
+
+
+@router.post(
     "/auth/register",
     response_model=schemas.AuthResponse,
     status_code=status.HTTP_201_CREATED,
 )
 def register(user_in: schemas.UserCreate, db: DbSession) -> schemas.AuthResponse:
-    user = create_user(user_in, db)
+    if not _registration_allowed():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Registration is disabled",
+        )
+    user = _create_user(user_in, db)
     return schemas.AuthResponse(
         access_token=auth.create_access_token(user.id),
         user=user,

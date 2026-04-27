@@ -136,6 +136,9 @@ Response `200`:
 
 Returns all local users.
 
+This endpoint is intended for local development. In production it is disabled by
+default unless `ALLOW_PUBLIC_USER_ENDPOINTS=true` is configured.
+
 Response `200`:
 
 ```json
@@ -151,6 +154,10 @@ Response `200`:
 ### POST /users
 
 Creates a user.
+
+This endpoint is intended for local development. Use `POST /auth/register` for
+normal sign-up. In production it is disabled by default unless
+`ALLOW_PUBLIC_USER_ENDPOINTS=true` is configured.
 
 Request:
 
