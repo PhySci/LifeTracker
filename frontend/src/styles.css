@@ -170,6 +170,11 @@ button:disabled {
   max-width: 760px;
 }
 
+.year-view {
+  display: grid;
+  gap: 14px;
+}
+
 .day-details-grid {
   display: grid;
   grid-template-columns: minmax(220px, 0.8fr) minmax(280px, 1.2fr);
@@ -293,6 +298,10 @@ button:disabled {
   margin-top: 16px;
 }
 
+.year-view .panel + .panel {
+  margin-top: 0;
+}
+
 .panel-heading {
   display: flex;
   align-items: flex-start;
@@ -392,6 +401,44 @@ button:disabled {
   gap: 8px;
 }
 
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.category-button {
+  display: grid;
+  gap: 6px;
+  min-height: 72px;
+  border: 1.5px solid #e8e3de;
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: #fffdfb;
+  color: #3a3a3a;
+  text-align: left;
+  transition: all 0.12s ease;
+}
+
+.category-button:hover {
+  border-color: #5bb89a;
+  background: #f0faf6;
+}
+
+.category-button span {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.category-button small {
+  color: #8a8480;
+  font-size: 0.75rem;
+}
+
+.back-button {
+  margin-bottom: 12px;
+}
+
 .activity-button {
   display: flex;
   align-items: center;
@@ -431,6 +478,18 @@ button:disabled {
   color: #8a8480;
   font-size: 0.75rem;
   white-space: nowrap;
+}
+
+.selected-day-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.selected-day-summary h2 {
+  margin: 0;
+  font-size: 1.12rem;
 }
 
 .empty-state {
@@ -760,27 +819,170 @@ button:disabled {
 }
 
 @media (max-width: 640px) {
-  .year-header {
-    padding-top: 20px;
+  body {
+    background: #ffffff;
   }
 
-  .header-cards,
+  .year-header {
+    padding: 16px 14px 12px;
+  }
+
+  .header-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .mini-card {
+    min-width: 0;
+    padding: 10px;
+  }
+
+  .mini-card strong {
+    font-size: 1.2rem;
+  }
+
+  .metric-card-wide {
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  .metric-card-wide strong {
+    font-size: clamp(1.8rem, 10vw, 2.5rem);
+  }
+
+  .metric-card-wide span,
+  .mini-card span {
+    font-size: 0.56rem;
+  }
+
+  .year-progress {
+    margin-top: 14px;
+  }
+
   .stats-grid,
   .side-column {
     grid-template-columns: 1fr;
   }
 
   .dashboard-layout {
-    gap: 20px;
-    padding-top: 22px;
+    gap: 16px;
+    padding: 16px 12px 28px;
   }
 
   .tabs {
     width: 100%;
+    margin-bottom: 14px;
   }
 
   .tab {
     flex: 1;
-    padding-inline: 10px;
+    min-height: 42px;
+    padding-inline: 8px;
+  }
+
+  .panel {
+    border-radius: 12px;
+    padding: 14px;
+  }
+
+  .panel-heading {
+    margin-bottom: 12px;
+  }
+
+  .panel h2 {
+    font-size: 1.18rem;
+  }
+
+  .heatmap-panel {
+    margin-inline: -4px;
+  }
+
+  .heatmap-months {
+    padding-left: 22px;
+  }
+
+  .heatmap-months span {
+    width: 17px;
+  }
+
+  .heatmap-days span {
+    height: 15px;
+  }
+
+  .heatmap-scroll {
+    padding-bottom: 18px;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+
+  .heatmap-cell {
+    width: 15px;
+    height: 15px;
+    border-radius: 3px;
+  }
+
+  .heatmap-cell:not(.placeholder):hover {
+    transform: none;
+  }
+
+  .heatmap-cell.selected {
+    outline: 2px solid #e07b39;
+    outline-offset: 2px;
+  }
+
+  .heatmap-legend {
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+
+  .selected-day-summary {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .selected-day-summary .text-button,
+  .back-button,
+  .text-button {
+    min-height: 38px;
+  }
+
+  .category-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .category-button {
+    min-height: 68px;
+  }
+
+  .activity-button {
+    min-height: 56px;
+    align-items: flex-start;
+    padding: 13px 14px;
+  }
+
+  .activity-button span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .activity-button small {
+    white-space: normal;
+  }
+
+  .activity-form input,
+  .activity-form button {
+    min-height: 44px;
+  }
+
+  .side-column {
+    order: 2;
+  }
+
+  .auth-layout {
+    padding: 24px 14px;
+  }
+
+  .auth-layout h1 {
+    font-size: clamp(2.1rem, 12vw, 3rem);
   }
 }

@@ -25,6 +25,7 @@ import { ActivityButtons } from "./components/ActivityButtons";
 import { AuthForm, AuthFormInput } from "./components/AuthForm";
 import { ActivityForm, ActivityFormInput } from "./components/ActivityForm";
 import { YearHeatmap } from "./components/YearHeatmap";
+import "./pwa";
 import "./styles.css";
 
 const currentYear = new Date().getFullYear();
@@ -266,7 +267,6 @@ function App() {
 
   function handleSelectHeatmapDate(date: string) {
     setSelectedDate(date);
-    setActiveTab("day");
   }
 
   async function handleMarkActivity(activity: Activity, date = selectedDate) {
@@ -308,9 +308,11 @@ function App() {
     <main className="app-shell">
       <header className="year-header">
         <div className="year-header-content">
-          <p className="eyebrow mono">
-            {currentYear} · {currentDateLabel}
-          </p>
+          <p className="eyebrow mono">{currentDateLabel}</p>
+
+          <div className="year-progress" aria-label="Прогресс года">
+            <span style={{ width: `${yearProgress}%` }} />
+          </div>
 
           <div className="header-cards">
             <article className="mini-card metric-card-wide">
@@ -321,33 +323,7 @@ function App() {
               <strong className="accent">{daysLeft}</strong>
               <span>дней осталось</span>
             </article>
-            <article className="mini-card metric-card-wide">
-              <strong>{summary?.active_days ?? 0}</strong>
-              <span>активных дней</span>
-            </article>
-            <article className="mini-card">
-              <strong className="good">{summary?.current_streak ?? 0}</strong>
-              <span>streak дней</span>
-            </article>
-            <article className="mini-card">
-              <strong>
-                {daysPassed > 0 && summary
-                  ? Math.round((summary.active_days / daysPassed) * 100)
-                  : 0}
-                %
-              </strong>
-              <span>эффективность</span>
-            </article>
           </div>
-        </div>
-
-        <div className="year-progress" aria-label="Прогресс года">
-          <span style={{ width: `${yearProgress}%` }} />
-        </div>
-        <div className="year-progress-labels mono">
-          <span>1 янв</span>
-          <span>день {todayDayOfYear}</span>
-          <span>31 дек</span>
         </div>
       </header>
 
@@ -394,12 +370,42 @@ function App() {
             </div>
 
             {activeTab === "year" ? (
-              <YearHeatmap
-                heatmap={heatmap}
-                isLoading={isLoading}
-                onSelectDate={handleSelectHeatmapDate}
-                selectedDate={selectedDate}
-              />
+              <div className="year-view">
+                <YearHeatmap
+                  heatmap={heatmap}
+                  isLoading={isLoading}
+                  onSelectDate={handleSelectHeatmapDate}
+                  selectedDate={selectedDate}
+                />
+
+                <section className="panel selected-day-summary">
+                  <div>
+                    <p className="eyebrow mono">Выбранный день</p>
+                    <h2>{formatDisplayDate(selectedDate)}</h2>
+                  </div>
+                  <div className="day-metrics">
+                    <span>score {selectedDayStats?.score ?? 0}</span>
+                    <span>событий {selectedDayStats?.event_count ?? 0}</span>
+                  </div>
+                  <button
+                    className="text-button"
+                    onClick={() => setActiveTab("day")}
+                    type="button"
+                  >
+                    Открыть детали дня
+                  </button>
+                </section>
+
+                <ActivityButtons
+                  activities={activities}
+                  disabled={isLoading}
+                  markingActivityId={markingActivityId}
+                  onMark={(activity) =>
+                    handleMarkActivity(activity, formatLocalDate(new Date()))
+                  }
+                  title="Записать сегодня"
+                />
+              </div>
             ) : null}
 
             {activeTab === "day" ? (
