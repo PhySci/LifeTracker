@@ -1,7 +1,7 @@
 {
   "name": "LifeTracker",
   "short_name": "LifeTracker",
-  "description": "Годовая heatmap привычек и быстрая запись событий дня.",
+  "description": "A yearly habit heatmap and quick daily event logging.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

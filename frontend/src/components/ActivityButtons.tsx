@@ -15,7 +15,7 @@ export function ActivityButtons({
   disabled,
   markingActivityId,
   onMark,
-  title = "Активности",
+  title = "Activities",
 }: ActivityButtonsProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
@@ -26,7 +26,7 @@ export function ActivityButtons({
     });
 
     return Array.from(categoryById.values()).sort((first, second) =>
-      first.name.localeCompare(second.name, "ru"),
+      first.name.localeCompare(second.name, "en"),
     );
   }, [activities]);
   const selectedCategory = categories.find(
@@ -57,8 +57,8 @@ export function ActivityButtons({
 
       {!isExpanded ? null : activities.length === 0 ? (
         <p className="empty-state">
-          Пока нет активностей. Создайте первую, затем нажимайте на неё каждый
-          раз, когда действие выполнено.
+          No activities yet. Create your first one, then tap it each time the
+          action is done.
         </p>
       ) : !selectedCategory ? (
         <div className="category-grid">
@@ -76,7 +76,7 @@ export function ActivityButtons({
                 type="button"
               >
                 <span>{category.name}</span>
-                <small>{activityCount} активн.</small>
+                <small>{activityCount} activities</small>
               </button>
             );
           })}
@@ -88,7 +88,7 @@ export function ActivityButtons({
             onClick={() => setSelectedCategoryId(null)}
             type="button"
           >
-            ← К категориям
+            ← Back to Categories
           </button>
 
           <div className="activity-grid">
@@ -103,7 +103,7 @@ export function ActivityButtons({
                   onClick={() => void onMark(activity)}
                   type="button"
                 >
-                  <span>{isMarking ? "Отмечаю..." : activity.name}</span>
+                  <span>{isMarking ? "Logging..." : activity.name}</span>
                   <small>+{activity.weight}</small>
                 </button>
               );

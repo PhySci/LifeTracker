@@ -40,14 +40,14 @@ export function AuthForm({ isSubmitting, onSubmit }: AuthFormProps) {
       <div className="panel-heading">
         <div>
           <p className="eyebrow mono">Private space</p>
-          <h2>{mode === "login" ? "Войти" : "Создать аккаунт"}</h2>
+          <h2>{mode === "login" ? "Sign In" : "Create Account"}</h2>
         </div>
       </div>
 
       <form className="activity-form auth-form" onSubmit={handleSubmit}>
         {mode === "register" ? (
           <label>
-            Имя
+            Name
             <input
               autoComplete="name"
               onChange={(event) => setName(event.target.value)}
@@ -71,7 +71,7 @@ export function AuthForm({ isSubmitting, onSubmit }: AuthFormProps) {
         </label>
 
         <label>
-          Пароль
+          Password
           <input
             autoComplete={mode === "login" ? "current-password" : "new-password"}
             onChange={(event) => setPassword(event.target.value)}
@@ -83,10 +83,10 @@ export function AuthForm({ isSubmitting, onSubmit }: AuthFormProps) {
 
         <button disabled={isSubmitting} type="submit">
           {isSubmitting
-            ? "Подождите..."
+            ? "Please wait..."
             : mode === "login"
-              ? "Войти"
-              : "Создать аккаунт"}
+              ? "Sign In"
+              : "Create Account"}
         </button>
       </form>
 
@@ -96,8 +96,8 @@ export function AuthForm({ isSubmitting, onSubmit }: AuthFormProps) {
         type="button"
       >
         {mode === "login"
-          ? "Нет аккаунта? Зарегистрироваться"
-          : "Уже есть аккаунт? Войти"}
+          ? "No account? Register"
+          : "Already have an account? Sign in"}
       </button>
     </section>
   );

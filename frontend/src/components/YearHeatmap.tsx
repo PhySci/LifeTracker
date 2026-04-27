@@ -8,20 +8,20 @@ type YearHeatmapProps = {
 };
 
 const monthNames = [
-  "Янв",
-  "Фев",
-  "Мар",
-  "Апр",
-  "Май",
-  "Июн",
-  "Июл",
-  "Авг",
-  "Сен",
-  "Окт",
-  "Ноя",
-  "Дек",
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
 ];
-const dayNames = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 function getIntensity(day: HeatmapDay, maxScore: number): number {
   if (day.score <= 0 || maxScore <= 0) {
@@ -47,7 +47,7 @@ function formatDayTitle(day: HeatmapDay): string {
 }
 
 function formatTooltipDate(date: string): string {
-  return new Date(`${date}T00:00:00`).toLocaleDateString("ru-RU", {
+  return new Date(`${date}T00:00:00`).toLocaleDateString("en-US", {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -100,13 +100,13 @@ export function YearHeatmap({
     <section className="panel heatmap-panel">
       <div className="panel-heading">
         <div>
-          <p className="eyebrow mono">Годовая карта</p>
+          <p className="eyebrow mono">Year Map</p>
         </div>
-        {isLoading ? <span className="pill">Загрузка</span> : null}
+        {isLoading ? <span className="pill">Loading</span> : null}
       </div>
 
       {days.length === 0 ? (
-        <p className="empty-state">Heatmap появится после загрузки данных.</p>
+        <p className="empty-state">The heatmap will appear after data loads.</p>
       ) : (
         <>
           <div className="heatmap-months mono" aria-hidden="true">
@@ -130,7 +130,7 @@ export function YearHeatmap({
               ))}
             </div>
 
-            <div className="heatmap-scroll" aria-label="Годовая heatmap">
+            <div className="heatmap-scroll" aria-label="Year heatmap">
               <div className="heatmap-grid">
                 {weeks.map((week, weekIndex) => (
                   <div className="heatmap-week" key={weekIndex}>
@@ -167,13 +167,13 @@ export function YearHeatmap({
           </div>
 
           <div className="heatmap-legend">
-            <span>меньше</span>
+            <span>less</span>
             {[0, 1, 2, 3, 4].map((level) => (
               <span className="heatmap-cell" data-level={level} key={level} />
             ))}
-            <span>больше</span>
+            <span>more</span>
             <span className="heatmap-cell today" data-level={0} />
-            <span>сегодня</span>
+            <span>today</span>
           </div>
         </>
       )}

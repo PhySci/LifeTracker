@@ -53,7 +53,7 @@ export function ActivityForm({
         type="button"
       >
         <div>
-          <h2>Новая привычка</h2>
+          <h2>New Habit</h2>
         </div>
         <span className="quick-log-chevron" aria-hidden="true">
           {isExpanded ? "↑" : "↓"}
@@ -63,7 +63,7 @@ export function ActivityForm({
       {!isExpanded ? null : (
         <form className="activity-form collapsible-content" onSubmit={handleSubmit}>
           <label>
-            Категория
+            Category
             <input
               list="category-options"
               value={category}
@@ -79,7 +79,7 @@ export function ActivityForm({
           </label>
 
           <label>
-            Название
+            Name
             <input
               value={name}
               onChange={(event) => setName(event.target.value)}
@@ -89,7 +89,7 @@ export function ActivityForm({
           </label>
 
           <label>
-            Вес
+            Weight
             <input
               min="0.1"
               step="0.1"
@@ -101,7 +101,7 @@ export function ActivityForm({
           </label>
 
           <button disabled={isSubmitting} type="submit">
-            {isSubmitting ? "Создаю..." : "Создать активность"}
+            {isSubmitting ? "Creating..." : "Create Activity"}
           </button>
         </form>
       )}

@@ -20,6 +20,10 @@ The app is designed for repeated, lightweight actions: workouts, reading,
 language practice, walking, meditation, study sessions, or any other habit where
 one day can contain more than one meaningful effort.
 
+<p align="center">
+  <img src="docs/printscreen.jpg" alt="LifeTracker dashboard" width="320" />
+</p>
+
 ## Core Idea
 
 Most trackers treat a day as a checkbox. LifeTracker treats every completed

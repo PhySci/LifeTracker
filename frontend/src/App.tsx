@@ -48,7 +48,7 @@ function formatLocalDate(date: Date): string {
 }
 
 function formatDisplayDate(date: string): string {
-  return new Date(`${date}T00:00:00`).toLocaleDateString("ru-RU", {
+  return new Date(`${date}T00:00:00`).toLocaleDateString("en-US", {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -91,12 +91,12 @@ function App() {
   const [notice, setNotice] = useState<string | null>(null);
   const [isSelectedDayExpanded, setIsSelectedDayExpanded] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => formatLocalDate(today));
-  const currentDate = today.toLocaleDateString("ru-RU", {
+  const currentDate = today.toLocaleDateString("en-US", {
     day: "numeric",
     month: "long",
     year: "numeric",
   });
-  const currentWeekday = today.toLocaleDateString("ru-RU", {
+  const currentWeekday = today.toLocaleDateString("en-US", {
     weekday: "long",
   });
   const currentDateLabel = `${currentDate}, ${
@@ -294,7 +294,7 @@ function App() {
       if (date === selectedDate) {
         setSelectedDateEvents(await fetchEvents(authToken, selectedDate));
       }
-      setNotice(`Отмечено: ${activity.name} · ${formatDisplayDate(date)}.`);
+      setNotice(`Logged: ${activity.name} · ${formatDisplayDate(date)}.`);
     } catch (unknownError) {
       handleRequestError(unknownError, "Could not log the activity.");
     } finally {
@@ -308,16 +308,16 @@ function App() {
         <div className="year-header-content">
           <p className="eyebrow mono">{currentDateLabel}</p>
 
-          <div className="year-progress" aria-label="Прогресс года">
+          <div className="year-progress" aria-label="Year progress">
             <span style={{ width: `${yearProgress}%` }} />
           </div>
 
           <div className="timeline-stats">
             <span>
-              <strong>{daysPassed}</strong> дней прошло
+              <strong>{daysPassed}</strong> days passed
             </span>
             <span>
-              <strong>{daysLeft}</strong> дней осталось
+              <strong>{daysLeft}</strong> days left
             </span>
           </div>
         </div>
@@ -329,10 +329,10 @@ function App() {
         <section className="auth-layout">
           <div>
             <p className="eyebrow mono">LifeTracker</p>
-            <h1>Твой личный трекер консистентности</h1>
+            <h1>Your personal consistency tracker</h1>
             <p>
-              Войди, чтобы создавать активности, отмечать повторные выполнения и
-              видеть годовую heatmap в стиле календаря.
+              Sign in to create activities, log repeated actions, and see your
+              year as a calendar-style heatmap.
             </p>
           </div>
           <AuthForm isSubmitting={isAuthenticating} onSubmit={handleAuth} />
@@ -361,7 +361,7 @@ function App() {
                   type="button"
                 >
                   <div>
-                    <h2>Выбранный день</h2>
+                    <h2>Selected Day</h2>
                   </div>
                   <span className="quick-log-toggle-meta">
                     <span className="pill">
@@ -379,12 +379,12 @@ function App() {
 
                     <div className="day-metrics">
                       <span>score {selectedDayStats?.score ?? 0}</span>
-                      <span>событий {selectedDayStats?.event_count ?? 0}</span>
+                      <span>events {selectedDayStats?.event_count ?? 0}</span>
                     </div>
 
                     {selectedDateLoggedActivities.length === 0 ? (
                       <p className="empty-state">
-                        На этот день пока ничего не записано.
+                        Nothing has been logged for this day yet.
                       </p>
                     ) : (
                       <div className="logged-activity-list">
@@ -412,7 +412,7 @@ function App() {
                 onMark={(activity) =>
                   handleMarkActivity(activity, formatLocalDate(new Date()))
                 }
-                title="Быстрая запись"
+                title="Quick Log"
               />
 
               <ActivityForm
@@ -427,7 +427,7 @@ function App() {
             <div className="card session-card">
               <strong>{currentUser.email}</strong>
               <button className="text-button" onClick={handleLogout} type="button">
-                Выйти
+                Sign Out
               </button>
             </div>
           </aside>
